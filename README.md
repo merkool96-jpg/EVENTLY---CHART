@@ -38,7 +38,7 @@ Il comando di verifica confronta SHA-256, `integrity_check` e `foreign_key_check
 
 ## Classifica e valori economici
 
-La Top 50 include soltanto profili con almeno una **presenza confermata**, ordinati per:
+La Top 50 include soltanto profili con almeno una **presenza confermata**. Per impostazione predefinita sono ordinati per:
 
 1. Numero di eventi distinti confermati, decrescente.
 2. Data dell’ultima presenza confermata, più recente per prima.
@@ -145,3 +145,13 @@ Il launcher non cancella database o backup, memorizza soltanto le versioni delle
 Il branch dedicato è `fix/evidence-based-identities`. La copia già scaricata sul Mac non cambia automaticamente. Chiudere EVENTLY, fare una copia della cartella attuale e scaricare lo ZIP di quel branch. Per applicare questa correzione senza sostituire i dati, copiare soltanto `backend/identity.py` e `frontend/src/main.tsx` dallo ZIP nelle rispettive cartelle dell'installazione esistente. Poi riaprire `AVVIA_EVENTLY.command`: il launcher ricompila il frontend aggiornato. Non sostituire `backend/evently.db`, `backend/backups` o l'intera cartella `backend`. Nessuna migrazione o cancellazione dei dati è richiesta da questa correzione.
 
 Il conteggio di proposte eliminate nella coda cloud non descrive il database indipendente del Mac. La verifica eseguita su questa istanza è documentata in `docs/IDENTITY_ENGINE_REVIEW.md`.
+
+## Colonne ordinabili: Partecipanti e Top 50
+
+Cliccare **Partecipante**, **Presenze**, **Registrazioni**, **Valore attribuito** o **Ultimo incontro** per ordinare. Un secondo clic inverte il verso; la freccia e il testo sopra la tabella mostrano il criterio attivo. Nomi inizialmente A–Z, quantità/importi dal maggiore, date dalla più recente. Date mancanti sempre in fondo. A parità rimangono presenze, ultima presenza, nome e ID come criteri deterministici.
+
+In **Top 50** vengono selezionate nuovamente le prime 50 persone secondo il criterio scelto, limitatamente a chi ha almeno una presenza confermata. La Top 3 segue la stessa scelta. La ricerca filtra le 50 persone selezionate. **Ripristina classifica per presenze** torna al ranking predefinito. L'ordinamento resta durante la navigazione nella sessione corrente e si ripristina ricaricando la pagina. Nessuna decisione di identità, partecipazione o importo viene modificata; per i valori parzialmente non definiti viene ordinato il subtotale noto già visualizzato.
+
+Test browser dedicato: con frontend avviato, `cd frontend && npm run test:sorting` (eventualmente `BROWSER_EXECUTABLE=/usr/bin/chromium`). Usa risposte API simulate, non modifica il database e verifica cinque criteri, inversione, Top 50/3, ricerca, reset, tastiera e mobile.
+
+Per applicare solo le colonne ordinabili alla copia Mac esistente: chiudere EVENTLY e conservare una copia della cartella; dallo ZIP del branch `feat/sortable-participant-columns` copiare `frontend/src/main.tsx`, **anche il nuovo file `frontend/src/peopleSorting.ts`**, e `frontend/src/style.css` nelle rispettive posizioni. Riaprire `AVVIA_EVENTLY.command` per ricompilare. Non sostituire il database o la cartella backend. Copiare soltanto main.tsx senza peopleSorting.ts impedirebbe la compilazione.

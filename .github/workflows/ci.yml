@@ -33,3 +33,4 @@ jobs:
             sleep 1
           done
           npm run test:e2e --prefix frontend
+          EVENTLY_URL=http://127.0.0.1:8001 npm run test:sorting --prefix frontend

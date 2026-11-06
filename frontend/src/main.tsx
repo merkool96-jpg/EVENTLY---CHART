@@ -20,6 +20,15 @@ import {
 } from "lucide-react";
 import "./style.css";
 import { ImportWizard } from "./ImportWizard";
+import {
+  defaultPeopleSort,
+  nextPeopleSort,
+  sortPeople,
+  sortLabels,
+  type PeopleSort,
+  type PeopleSortKey,
+} from "./peopleSorting";
+
 type Person = {
   id: number;
   name: string;
@@ -182,9 +191,50 @@ function App() {
       setError(String(e));
     }
   }
-  const filtered = people.filter((p) =>
+  const [peopleSort, setPeopleSort] = useState<PeopleSort>(defaultPeopleSort);
+  const orderedPeople = sortPeople(people, peopleSort);
+  const rankedPeople = orderedPeople.filter((p) => p.visits > 0).slice(0, 50);
+  const tablePeople = page === "Top 50" ? rankedPeople : orderedPeople;
+  const filtered = tablePeople.filter((p) =>
     (p.name + " " + p.email).toLowerCase().includes(query.toLowerCase()),
   );
+  function sortButton(key: PeopleSortKey, label: string) {
+    const active = peopleSort.key === key;
+    const next = nextPeopleSort(peopleSort, key);
+    return (
+      <button
+        className={"column-sort " + (active ? "selected" : "")}
+        aria-label={"Ordina per " + label}
+        title={
+          "Ordina per " +
+          label +
+          " in ordine " +
+          (next.direction === "asc" ? "crescente" : "decrescente")
+        }
+        onClick={() => setPeopleSort((current) => nextPeopleSort(current, key))}
+      >
+        {label}
+        <span aria-hidden="true">
+          {active ? (peopleSort.direction === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    );
+  }
+  function sortHeader(key: PeopleSortKey, label: string) {
+    return (
+      <th
+        aria-sort={
+          peopleSort.key === key
+            ? peopleSort.direction === "asc"
+              ? "ascending"
+              : "descending"
+            : "none"
+        }
+      >
+        {sortButton(key, label)}
+      </th>
+    );
+  }
   const nav = [
     { icon: LayoutDashboard, label: "Dashboard" },
     { icon: CalendarDays, label: "Eventi" },
@@ -527,25 +577,22 @@ function App() {
           )}
           {page === "Top 50" && (
             <div className="podium">
-              {people
-                .filter((p) => p.visits > 0)
-                .slice(0, 3)
-                .map((p, i) => (
-                  <button
-                    key={p.id}
-                    className="panel podium-card"
-                    onClick={() => showProfile(p)}
-                  >
-                    <span className="rank-number">0{i + 1}</span>
-                    <span className="avatar">{initials(p.name)}</span>
-                    <h3>{p.name}</h3>
-                    <strong>{p.visits} presenze</strong>
-                    <small>
-                      {p.last_seen ? day(p.last_seen) : "—"} · {euro(p.value)}{" "}
-                      attribuiti
-                    </small>
-                  </button>
-                ))}
+              {rankedPeople.slice(0, 3).map((p, i) => (
+                <button
+                  key={p.id}
+                  className="panel podium-card"
+                  onClick={() => showProfile(p)}
+                >
+                  <span className="rank-number">0{i + 1}</span>
+                  <span className="avatar">{initials(p.name)}</span>
+                  <h3>{p.name}</h3>
+                  <strong>{p.visits} presenze</strong>
+                  <small>
+                    {p.last_seen ? day(p.last_seen) : "—"} · {euro(p.value)}{" "}
+                    attribuiti
+                  </small>
+                </button>
+              ))}
             </div>
           )}
           {(page === "Partecipanti" || page === "Top 50") && (
@@ -558,8 +605,13 @@ function App() {
                       : "Tutte le persone"}
                   </h3>
                   <p>
-                    {people.length} profili · presenze ↓, ultima presenza ↓,
-                    nome A–Z
+                    {tablePeople.length} profili · {sortLabels[peopleSort.key]}{" "}
+                    {peopleSort.direction === "asc"
+                      ? "↑ crescente"
+                      : "↓ decrescente"}
+                    {page === "Top 50"
+                      ? " · prime 50 ricalcolate sulla colonna scelta"
+                      : ""}
                   </p>
                 </div>
                 <div className="search">
@@ -572,15 +624,41 @@ function App() {
                   />
                 </div>
               </div>
+              <div className="sort-toolbar">
+                <span>
+                  Clicca una colonna per ordinare; clicca di nuovo per
+                  invertire.
+                </span>
+                <button
+                  className="text-button"
+                  onClick={() => setPeopleSort(defaultPeopleSort)}
+                >
+                  Ripristina classifica per presenze
+                </button>
+              </div>
               <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>PARTECIPANTE</th>
-                      <th>PRESENZE / REGISTRAZIONI</th>
-                      <th>VALORE ATTRIBUITO</th>
-                      <th>ULTIMO INCONTRO</th>
+                      {sortHeader("name", "Partecipante")}
+                      <th
+                        aria-sort={
+                          ["visits", "registrations"].includes(peopleSort.key)
+                            ? peopleSort.direction === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
+                      >
+                        <div className="split-sort">
+                          {sortButton("visits", "Presenze")}
+                          <span>/</span>
+                          {sortButton("registrations", "Registrazioni")}
+                        </div>
+                      </th>
+                      {sortHeader("value", "Valore attribuito")}
+                      {sortHeader("last_seen", "Ultimo incontro")}
                       <th />
                     </tr>
                   </thead>
@@ -668,7 +746,9 @@ function App() {
               {matches.map((m) => (
                 <section key={m.a.id + "-" + m.b.id} className="panel match">
                   <div className="match-top">
-                    <span className="tag">Da verificare · evidenza specifica</span>
+                    <span className="tag">
+                      Da verificare · evidenza specifica
+                    </span>
                     <span>{m.reason}</span>
                   </div>
                   <div className="match-people">
@@ -751,8 +831,8 @@ function App() {
                               : h.action === "override_automatic_exclusion"
                                 ? "Superamento esclusione automatica"
                                 : h.action === "split"
-                                ? "Separazione"
-                                : "Mantieni separati"}{" "}
+                                  ? "Separazione"
+                                  : "Mantieni separati"}{" "}
                           · #{h.a}
                           {h.b ? " / #" + h.b : ""}
                         </strong>
