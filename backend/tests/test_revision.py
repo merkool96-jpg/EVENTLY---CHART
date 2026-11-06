@@ -108,7 +108,7 @@ def test_homonyms_with_different_email_never_auto_merge(client):
     upload(client,e,'Nome completo,Email\nAnna Rossi,anna.one@example.test\nAnna Rossi,anna.two@example.test\n')
     assert len(client.get('/api/people').json())==2
     assert client.get('/api/matches').json()==[]
-    assert client.post('/api/matches/decision',json={'a':1,'b':2,'action':'merge'}).status_code==409
+    assert client.post('/api/matches/decision',json={'a':1,'b':2,'action':'merge'}).status_code==200
 
 
 def test_automatic_personal_email_compatible_and_presumed_name(client):

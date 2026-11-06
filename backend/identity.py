@@ -1,7 +1,6 @@
 """Identity groups are a reversible graph. Original people and rows never move."""
 import re
 import unicodedata
-from difflib import SequenceMatcher
 from fastapi import HTTPException
 
 
@@ -19,12 +18,82 @@ def personal(email):
     return bool(sep and '.' in domain and len(local) >= 3 and local not in generic)
 
 
-def compatible(a, b):
-    if a['email'] and b['email'] and a['email'].lower() != b['email'].lower():
+def name_parts(name):
+    """Without structured source fields, first token is given name, rest surname.
+
+    Keep the boundary: a surname can never compensate a different given name.
+    Compound-name boundaries that cannot be inferred remain conservative.
+    """
+    words = [norm(word) for word in str(name).split() if norm(word)]
+    return (words[0], ''.join(words[1:])) if words else ('', '')
+
+
+def surname_typo(a, b):
+    if a == b or min(len(a), len(b)) < 4 or abs(len(a)-len(b)) > 1:
         return False
-    if a['phone'] and b['phone'] and norm(a['phone']) != norm(b['phone']):
+    if len(a) == len(b):
+        different = [i for i in range(len(a)) if a[i] != b[i]]
+        return len(different) == 1 or (len(different) == 2 and different[1] == different[0]+1 and a[different[0]] == b[different[1]] and a[different[1]] == b[different[0]])
+    short, long = (a,b) if len(a)<len(b) else (b,a)
+    return any(long[:i]+long[i+1:] == short for i in range(len(long)))
+
+
+def compatible_names(a,b):
+    first_a,last_a = name_parts(a['name'])
+    first_b,last_b = name_parts(b['name'])
+    return bool(first_a and first_a == first_b and last_a and last_b and (last_a == last_b or surname_typo(last_a,last_b)))
+
+
+def same_email(a,b):
+    return bool(a['email'] and a['email'].casefold() == b['email'].casefold())
+
+
+def same_phone(a,b):
+    return bool(norm(a['phone']) and norm(a['phone']) == norm(b['phone']))
+
+
+def contradictory_contacts(a,b):
+    email_conflict = personal(a['email']) and personal(b['email']) and a['email'].casefold() != b['email'].casefold()
+    phone_conflict = norm(a['phone']) and norm(b['phone']) and norm(a['phone']) != norm(b['phone'])
+    return bool(email_conflict or phone_conflict)
+
+
+def compatible(a,b):
+    return compatible_names(a,b) and not contradictory_contacts(a,b)
+
+
+def partial_email_clue(a,b):
+    first_a,last_a = name_parts(a['name'])
+    first_b,last_b = name_parts(b['name'])
+    if not first_a or first_a != first_b or bool(last_a) == bool(last_b):
         return False
-    return SequenceMatcher(None, norm(a['name']), norm(b['name'])).ratio() >= .84
+    partial, surname = (a,last_b) if not last_a else (b,last_a)
+    if not personal(partial['email']):
+        return False
+    local = partial['email'].split('@',1)[0]
+    tokens = [norm(t) for t in re.split(r'[^a-zA-ZÀ-ÿ]+',local) if norm(t)]
+    return norm(local) in (first_a+surname,surname+first_a) or (first_a in tokens and surname in tokens)
+
+
+def evidence(a,b):
+    if same_email(a,b):
+        if not compatible_names(a,b):
+            return ('shared_email','Email coincidente, nominativo differente: possibile indirizzo condiviso',0)
+        return ('email','Email coincidente e nome compatibile',1)
+    if same_phone(a,b):
+        return ('phone','Telefono coincidente; verificare il nominativo e i contatti',2)
+    if contradictory_contacts(a,b):
+        return None
+    first_a,last_a = name_parts(a['name'])
+    first_b,last_b = name_parts(b['name'])
+    if first_a and first_a == first_b and last_a and last_b:
+        if last_a == last_b:
+            return ('exact_name','Nome e cognome identici, identificativi mancanti o da verificare',3)
+        if surname_typo(last_a,last_b):
+            return ('surname_typo','Possibile errore di battitura nel cognome; nome esatto',4)
+    if partial_email_clue(a,b):
+        return ('partial_email','Nome incompleto, email compatibile: indizio da verificare',5)
+    return None
 
 
 def groups(c):
@@ -57,8 +126,23 @@ def merge(c, a, b, reason):
     ga, gb = membership[a], membership[b]
     if ga == gb:
         return None
-    if conflicts(c, members[ga], members[gb]):
-        raise HTTPException(409, 'Unione bloccata: almeno due identità dei gruppi sono state mantenute separate')
+    excluded = conflicts(c, members[ga], members[gb])
+    overridable = []
+    for left,right in excluded:
+        decisions = c.execute("SELECT reason FROM decisions WHERE action='separate' AND ((a=? AND b=?) OR (a=? AND b=?))",(left,right,right,left)).fetchall()
+        automatic_only = bool(decisions) and all(row['reason']=='Omonimi con email differenti' for row in decisions)
+        if reason!='Unione manuale verificata' or not automatic_only:
+            raise HTTPException(409, 'Unione bloccata: almeno due identità dei gruppi sono state mantenute separate')
+        overridable.append((left,right))
+    verified_aliases = confirmed_name_aliases(c, set(members[ga])) | confirmed_name_aliases(c, set(members[gb]))
+    for left in members[ga]:
+        for right in members[gb]:
+            x,y = ps[left],ps[right]
+            if not compatible_names(x,y) and not same_email(x,y) and not same_phone(x,y) and frozenset((name_parts(x['name']),name_parts(y['name']))) not in verified_aliases:
+                raise HTTPException(409, 'Unione bloccata: nomi incompatibili tra i membri dei gruppi senza identificativo forte coincidente')
+    for left,right in overridable:
+        c.execute('DELETE FROM separate WHERE a=? AND b=?',(left,right))
+        c.execute('INSERT INTO decisions(action,a,b,reason) VALUES(?,?,?,?)',('override_automatic_exclusion',left,right,'Unione manuale: superata esclusione automatica legacy per email differenti'))
     link = c.execute('INSERT INTO identity_links(a,b,reason) VALUES(?,?,?)', (a,b,reason)).lastrowid
     c.execute('INSERT INTO decisions(action,a,b,link_id,reason) VALUES(?,?,?,?,?)', ('merge',a,b,link,reason))
     return link
@@ -81,56 +165,72 @@ def split_member(c, pid):
     c.execute('INSERT INTO decisions(action,a,reason) VALUES(?,?,?)', ('split',pid,'Scollegata identità originale dal gruppo'))
 
 
+def confirmed_name_aliases(c, member_ids=None):
+    aliases = set()
+    for row in c.execute("SELECT p.name,q.name,l.a,l.b FROM identity_links l JOIN people p ON p.id=l.a JOIN people q ON q.id=l.b WHERE l.active=1 AND l.reason='Unione manuale verificata'"):
+        if member_ids is not None and (row[2] not in member_ids or row[3] not in member_ids):
+            continue
+        aliases.add(frozenset((name_parts(row[0]),name_parts(row[1]))))
+    return aliases
+
+
 def identify(c, name, email, phone):
-    ps, membership, members = groups(c)
+    ps,membership,members = groups(c)
     person = {'name':name,'email':email,'phone':phone}
-    exact = [p for p in ps.values() if (norm(p['name']),p['email'].lower(),norm(p['phone'])) == (norm(name),email,norm(phone))]
-    if len(exact) == 1 and (full_name(name) or personal(email)):
-        return exact[0]['id'], 'existing'
+    exact = [p for p in ps.values() if (name_parts(p['name']),p['email'].casefold(),norm(p['phone'])) == (name_parts(name),email.casefold(),norm(phone))]
+    # An exact original identity is reused, but name-only reuse still needs a
+    # unique plausible group (homonyms with missing data must remain ambiguous).
+    plausible = {membership[p['id']] for p in ps.values() if name_parts(p['name']) == name_parts(name) and not contradictory_contacts(person,p)}
+    if len(exact)==1 and (personal(email) or (full_name(name) and len(plausible)==1)):
+        return exact[0]['id'],'existing'
     legacy = c.execute('SELECT person_id FROM aliases WHERE name=? AND lower(email)=? AND phone=?',(name,email,phone)).fetchall()
     if len(legacy)==1 and legacy[0]['person_id'] in ps:
-        return legacy[0]['person_id'], 'existing'
-    pid = c.execute('INSERT INTO people(name,email,phone) VALUES(?,?,?)', (name,email,phone)).lastrowid
-    # Homonyms with different emails are explicitly and permanently separate.
-    for p in ps.values():
-        if norm(p['name']) == norm(name) and email and p['email'] and email != p['email'].lower():
-            keep_separate(c,pid,p['id'],'Omonimi con email differenti')
-    email_candidates = [p for p in ps.values() if personal(email) and email == p['email'].lower() and compatible(person,p)]
-    name_candidates = [p for p in ps.values() if full_name(name) and full_name(p['name']) and norm(name) == norm(p['name']) and compatible(person,p)]
-    # Even if email evidence is stronger, multiple plausible groups require review.
-    candidates = {membership[p['id']] for p in email_candidates + name_candidates}
-    if len(candidates) == 1:
-        gid = next(iter(candidates))
-        # Check every original identity, not just the representative.
-        if all(compatible(person,ps[i]) for i in members[gid]) and not conflicts(c,[pid],members[gid]):
-            reason = 'Automatica: email personale compatibile' if email_candidates else 'Presunta: nome completo univoco'
+        return legacy[0]['person_id'],'existing'
+    pid = c.execute('INSERT INTO people(name,email,phone) VALUES(?,?,?)',(name,email,phone)).lastrowid
+    shared = any(same_email(person,p) and not compatible_names(person,p) for p in ps.values())
+    email_candidates = [p for p in ps.values() if personal(email) and same_email(person,p) and compatible(person,p) and not shared]
+    name_candidates = [p for p in ps.values() if full_name(name) and name_parts(name)==name_parts(p['name']) and compatible(person,p)]
+    possible = {membership[p['id']] for p in email_candidates+name_candidates}
+    if len(possible)==1 and not shared:
+        gid = next(iter(possible))
+        aliases = confirmed_name_aliases(c, set(members[gid]))
+        def group_safe(p):
+            alias = frozenset((name_parts(name),name_parts(p['name']))) in aliases
+            return not contradictory_contacts(person,p) and (compatible_names(person,p) or alias)
+        if all(group_safe(ps[i]) for i in members[gid]) and not conflicts(c,[pid],members[gid]):
+            reason = 'Automatica: email personale compatibile' if email_candidates else 'Presunta: nome e cognome esatti, candidato univoco'
             merge(c,pid,gid,reason)
-            return pid, 'automatic' if email_candidates else 'presumed'
-    similar = any(similarity(person,p)[0] >= .7 for p in ps.values())
-    return pid, 'ambiguous' if similar else ('new' if full_name(name) else 'incomplete')
+            return pid,'automatic' if email_candidates else 'presumed'
+    # The queue and the import preview share exactly the same evidence rules.
+    ambiguous = any(m['a']['id']==pid or m['b']['id']==pid for m in candidates(c, focus=pid))
+    return pid,'ambiguous' if ambiguous else ('new' if full_name(name) else 'incomplete')
 
 
-def similarity(a,b):
-    if a['email'] and a['email'].lower()==b['email'].lower():
-        return 1., 'Stessa email: verificare compatibilità'
-    if norm(a['phone']) and norm(a['phone'])==norm(b['phone']):
-        return 1., 'Stesso telefono'
-    return SequenceMatcher(None,norm(a['name']),norm(b['name'])).ratio(), 'Nome simile o parziale'
-
-
-def candidates(c):
-    ps, membership, members = groups(c)
+def candidates(c, focus=None):
+    ps,membership,members = groups(c)
+    blocked = {tuple(sorted((membership[a],membership[b]))) for a,b in c.execute('SELECT a,b FROM separate')}
+    identities = list(ps.values())
     result = {}
-    blocked={tuple(sorted((membership[a],membership[b]))) for a,b in c.execute('SELECT a,b FROM separate')}
-    identities=list(ps.values())
-    for index,a in enumerate(identities):
-        for b in identities[index+1:]:
-            ga,gb = sorted((membership[a['id']],membership[b['id']]))
-            if ga==gb or (ga,gb) in blocked:
+    # First collect evidence from ORIGINAL identities, not fabricated root pairs.
+    pairs = ((ps[focus], b) for b in identities if b['id']!=focus) if focus is not None else ((a,b) for index,a in enumerate(identities) for b in identities[index+1:])
+    for a,b in pairs:
+        ga,gb = sorted((membership[a['id']],membership[b['id']]))
+        if ga==gb or (ga,gb) in blocked:
+            continue
+        proof = evidence(a,b)
+        if not proof:
+            continue
+        kind,reason,priority = proof
+        key = (ga,gb)
+        candidate = {'a':a,'b':b,'reason':reason,'evidence':kind,'priority':priority,'members_a':len(members[membership[a['id']]]),'members_b':len(members[membership[b['id']]])}
+        if key not in result or priority < result[key]['priority']:
+            result[key] = candidate
+    valid = []
+    for row in result.values():
+        if row['evidence']=='partial_email':
+            partial = row['a'] if not name_parts(row['a']['name'])[1] else row['b']
+            plausible_groups = {membership[p['id']] for p in identities if membership[p['id']] != membership[partial['id']] and tuple(sorted((membership[p['id']],membership[partial['id']]))) not in blocked and (proof := evidence(partial,p)) and proof[0]=='partial_email'}
+            if len(plausible_groups) != 1:
                 continue
-            score, reason = similarity(a,b)
-            if score>=.7:
-                key=(ga,gb)
-                if key not in result or result[key]['score'] < round(score*100):
-                    result[key]={'a':ps[ga],'b':ps[gb],'score':round(score*100),'reason':reason,'members_a':len(members[ga]),'members_b':len(members[gb])}
-    return sorted(result.values(),key=lambda r:-r['score'])[:200]
+        valid.append(row)
+    return sorted(valid,key=lambda r:(r['priority'],r['a']['id'],r['b']['id']))[:200]

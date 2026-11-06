@@ -77,17 +77,22 @@ L’endpoint V1 `POST /api/events/{id}/import` resta disponibile, marcato deprec
 
 Le identità originali e le partecipazioni non vengono più spostate o cancellate durante una fusione. Un gruppo è un grafo di collegamenti attivi; lo storico registra decisioni manuali e automatiche.
 
-- Stessa email personale con nome compatibile e contatti senza conflitti: unione automatica.
-- Nome e cognome completi identici, un solo gruppo candidato e nessun conflitto: unione **presunta**, motivazione esplicita nello storico.
-- Nomi parziali, email generiche/condivise, prove discordanti o più gruppi possibili: nuovo record e Centro Verifica Identità.
-- Omonimi con email differenti: blocco permanente MANTIENI SEPARATI.
-- Dati insufficienti: profilo incompleto; un nome singolo senza email personale non viene assunto come prova sufficiente per collegare eventi diversi.
+- Nome e cognome vengono confrontati separatamente. Nomi propri differenti non sono compensati dal cognome uguale e non generano una segnalazione senza identificativi coincidenti.
+- Stessa email personale, nome esatto, cognome esatto o con un solo refuso plausibile, nessun contatto contraddittorio e nessun indizio di email condivisa: unione automatica, dopo controllo di tutti i membri del gruppo.
+- Nome e cognome normalizzati identici, un solo gruppo candidato e nessun conflitto: identità presunta. Le identità originali esattamente già note vengono riutilizzate per evitare duplicati.
+- Nome esatto e cognome con un refuso plausibile: verifica manuale. Il refuso ammette una sola inserzione, rimozione, sostituzione o trasposizione adiacente, con cognome di almeno quattro lettere. Nessun fuzzy matching dei nomi propri.
+- Email uguale con nomi incompatibili: verifica con avviso di possibile indirizzo condiviso, mai unione automatica. Stesso telefono è un'evidenza da verificare, non un'autorizzazione automatica a unire.
+- Email personali differenti: profili distinti, nessuna proposta basata soltanto sul nome. L'amministratore può unirli manualmente se il nome è compatibile o ci sono identificativi forti/alias confermati; restano inviolabili le separazioni manuali.
+- Nome incompleto: verifica solo se il nome è esatto, l'email contiene indizi specifici sia del nome sia del cognome e il gruppo candidato è univoco. L'email è un indizio, non una prova per l'unione automatica.
+- Dati insufficienti: profilo incompleto senza segnalazioni generiche. Alias nominali confermati manualmente vengono riutilizzati soltanto nel gruppo in cui sono stati approvati.
 
-Il riconoscimento di email personale è **euristico**, non una certificazione: esclude caselle generiche note e identificativi troppo brevi. La compatibilità nomi usa similarità normalizzata >=84%; il Centro propone somiglianze >=70%, telefoni uguali o email uguali. Il punteggio non è una probabilità. Tutte le decisioni automatiche sono tracciate e annullabili.
+Il riconoscimento di email personale è **euristico**, non una certificazione: esclude caselle generiche note e identificativi troppo brevi. Il Centro mostra la motivazione verificabile, non percentuali di somiglianza o probabilità. La coda viene calcolata dai dati correnti: aggiornando l'algoritmo, le proposte non conformi scompaiono senza cancellare persone o decisioni.
+
+**Limite sui nomi composti:** quando il file contiene soltanto il nominativo completo, si interpreta il primo elemento come nome e il resto come cognome. Confini ambigui, doppi nomi e cognomi particolari restano conservativi e possono richiedere verifica con identificativi forti. Non si usa un servizio esterno o una lista di nomi per inventare equivalenze.
 
 **UNISCI** controlla prima tutti i membri dei due gruppi: un solo blocco permanente impedisce la fusione con risposta 409. **Annulla unione** nello storico disattiva quel collegamento e ricalcola i gruppi; non annulla silenziosamente altre decisioni successive. La separazione risultante genera blocchi permanenti tra i gruppi. **Separa identità** nel profilo scollega tutte le unioni incidenti all’identità originale selezionata, conserva le sue righe e crea blocchi verso gli altri membri. Se era un ponte, anche il resto del gruppo può suddividersi: le righe originali rimangono sempre intatte.
 
-MANTIENI SEPARATI è permanente e non ha un pulsante di sblocco in questa versione. Gli eventi vengono **archiviati**, non eliminati fisicamente: le fonti restano disponibili nello storico importazioni.
+MANTIENI SEPARATI deciso dall’amministratore è permanente e non ha un pulsante di sblocco. Le vecchie esclusioni create automaticamente dalla V1.1 per la sola email differente possono essere superate esclusivamente da una nuova unione manuale esplicita: lo storico resta intatto e registra il superamento. Se esiste anche una scelta manuale di separazione, il blocco prevale sempre. Gli eventi vengono **archiviati**, non eliminati fisicamente: le fonti restano disponibili nello storico importazioni.
 
 ## Demo e verifiche
 
@@ -101,7 +106,7 @@ npm run build
 npm audit --audit-level=high
 ```
 
-Sono mantenuti tutti i nove test V1, aggiornando le aspettative incompatibili con la revisione (spesa distinta da valore, separazioni permanenti e originali non distrutti), e aggiunti diciannove test di regressione. La suite verifica tutti i casi obbligatori, oltre a backup, migrazione bloccata in caso di errore, file reali dei tre formati, fogli, mappature, anteprime senza effetti, fonti conservate e conflitti tra gruppi.
+Sono mantenuti tutti i nove test V1, aggiornando le aspettative incompatibili con la revisione, i diciannove test V1.1 e ventitré test sul motore conservativo: 51 test complessivi. Il test degli omonimi con email differenti ora verifica anche la scelta manuale esplicitamente consentita dai nuovi requisiti. La suite verifica tutti i casi obbligatori, oltre a backup, migrazione bloccata in caso di errore, file reali dei tre formati, fogli, mappature, anteprime senza effetti, fonti conservate e conflitti tra gruppi.
 
 Smoke test browser **solo su database dedicato vuoto**, mai sul database personale. Esempio con due terminali:
 
@@ -133,3 +138,10 @@ Aprire `LEGGIMI-MAC.html` per le istruzioni illustrate dal browser. Con Python 3
 `127.0.0.1` indica sempre il dispositivo su cui si trova il browser: quello del Mac non raggiunge il server cloud. Se il desktop cloud non è accessibile, usare questa copia locale gratuita. Il codice scaricato da GitHub non include database personali; un eventuale pacchetto privato con dati va conservato privatamente. Le copie cloud e Mac non si sincronizzano.
 
 Il launcher non cancella database o backup, memorizza soltanto le versioni delle dipendenze nella cartella ignorata `.evently-local` e mantiene il server su localhost. Verifica disponibilità della porta e salute dell'API prima di aprire il browser. Gli aggiornamenti richiedono una nuova preparazione solo quando cambiano lockfile o sorgenti. L'avvio è stato verificato nel runtime Linux cloud; il doppio clic e gli avvisi Gatekeeper richiedono verifica sul Mac dell'utente.
+
+
+## Aggiornamento del motore conservativo sul Mac
+
+Il branch dedicato è `fix/evidence-based-identities`. La copia già scaricata sul Mac non cambia automaticamente. Chiudere EVENTLY, fare una copia della cartella attuale e scaricare lo ZIP di quel branch. Per applicare questa correzione senza sostituire i dati, copiare soltanto `backend/identity.py` e `frontend/src/main.tsx` dallo ZIP nelle rispettive cartelle dell'installazione esistente. Poi riaprire `AVVIA_EVENTLY.command`: il launcher ricompila il frontend aggiornato. Non sostituire `backend/evently.db`, `backend/backups` o l'intera cartella `backend`. Nessuna migrazione o cancellazione dei dati è richiesta da questa correzione.
+
+Il conteggio di proposte eliminate nella coda cloud non descrive il database indipendente del Mac. La verifica eseguita su questa istanza è documentata in `docs/IDENTITY_ENGINE_REVIEW.md`.

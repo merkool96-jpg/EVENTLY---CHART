@@ -68,7 +68,7 @@ type ImportEntry = {
   status: string;
   created_at: string;
 };
-type Match = { a: Person; b: Person; score: number; reason: string };
+type Match = { a: Person; b: Person; evidence: string; reason: string };
 type Stats = {
   people: number;
   events: number;
@@ -668,7 +668,7 @@ function App() {
               {matches.map((m) => (
                 <section key={m.a.id + "-" + m.b.id} className="panel match">
                   <div className="match-top">
-                    <span className="tag">{m.score}% corrispondenza</span>
+                    <span className="tag">Da verificare · evidenza specifica</span>
                     <span>{m.reason}</span>
                   </div>
                   <div className="match-people">
@@ -748,7 +748,9 @@ function App() {
                             ? "Unione"
                             : h.action === "undo"
                               ? "Annullamento"
-                              : h.action === "split"
+                              : h.action === "override_automatic_exclusion"
+                                ? "Superamento esclusione automatica"
+                                : h.action === "split"
                                 ? "Separazione"
                                 : "Mantieni separati"}{" "}
                           · #{h.a}
