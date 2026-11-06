@@ -125,3 +125,11 @@ Se Chromium è già installato: `BROWSER_EXECUTABLE=/usr/bin/chromium npm run te
 - La spesa di una partecipazione già presente non viene sovrascritta dal reimport: l’originale successivo viene conservato; non esiste ancora un editor della spesa. Non è contabilità o gestione pagamenti.
 - I file originali aumentano la dimensione del database; nessuna politica automatica di cancellazione delle fonti confermate. Le anteprime scadute vengono rimosse alla successiva anteprima.
 - Le unioni V1 non hanno una provenienza recuperabile se mancano fonti o backup. La V1.1 non dichiara di recuperarli.
+
+## Utilizzo sul Mac senza terminale
+
+Aprire `LEGGIMI-MAC.html` per le istruzioni illustrate dal browser. Con Python 3.12+ e Node.js LTS installati, fare doppio clic su `AVVIA_EVENTLY.command`. Il primo avvio prepara l'ambiente, installa dai lockfile e compila il frontend; poi apre automaticamente la dashboard su `http://127.0.0.1:8765`. Lasciare aperta la finestra di avvio. Il launcher usa la build servita da FastAPI, con un solo indirizzo e senza dipendere dal server di sviluppo Vite.
+
+`127.0.0.1` indica sempre il dispositivo su cui si trova il browser: quello del Mac non raggiunge il server cloud. Se il desktop cloud non è accessibile, usare questa copia locale gratuita. Il codice scaricato da GitHub non include database personali; un eventuale pacchetto privato con dati va conservato privatamente. Le copie cloud e Mac non si sincronizzano.
+
+Il launcher non cancella database o backup, memorizza soltanto le versioni delle dipendenze nella cartella ignorata `.evently-local` e mantiene il server su localhost. Verifica disponibilità della porta e salute dell'API prima di aprire il browser. Gli aggiornamenti richiedono una nuova preparazione solo quando cambiano lockfile o sorgenti. L'avvio è stato verificato nel runtime Linux cloud; il doppio clic e gli avvisi Gatekeeper richiedono verifica sul Mac dell'utente.

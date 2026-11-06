@@ -11,3 +11,5 @@ dist/
 
 *.tsbuildinfo
 backups/
+
+.evently-local/
