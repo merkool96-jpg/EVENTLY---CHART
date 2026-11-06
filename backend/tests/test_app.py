@@ -16,7 +16,7 @@ def event(c):
     return r.json()['id']
 
 def upload(c,e,data,name='people.csv'):
-    return c.post(f'/api/events/{e}/import',files={'file':(name,data)})
+    return c.post(f'/api/events/{e}/import',files={'file':(name,data)},data={'status':'confirmed'})
 
 def test_csv_auto_columns_money_idempotence_persistence(client):
     e=event(client)
@@ -24,7 +24,7 @@ def test_csv_auto_columns_money_idempotence_persistence(client):
     r=upload(client,e,content)
     assert r.status_code==200 and r.json()['imported']==1
     assert upload(client,e,content).json()['skipped']==1
-    assert client.get('/api/dashboard').json()['revenue']==123456
+    assert client.get('/api/dashboard').json()['actual_spend']==123456
     module.init()
     assert client.get('/api/people').json()[0]['name']=='Anna Rossi'
     assert client.get('/api/people/1').json()['events'][0]['amount']==123456
@@ -34,7 +34,7 @@ def test_xlsx(client):
     w=Workbook();w.active.append(['Full name','Email','Amount']);w.active.append(['Eva Verdi','eva@example.test',12.5])
     b=io.BytesIO();w.save(b)
     assert upload(client,e,b.getvalue(),'people.xlsx').json()['imported']==1
-    assert client.get('/api/events').json()[0]['revenue']==1250
+    assert client.get('/api/events').json()[0]['actual_spend']==1250
 
 def test_xls(client):
     import xlwt
@@ -44,22 +44,29 @@ def test_xls(client):
         for j,v in enumerate(row):s.write(i,j,v)
     b=io.BytesIO();w.save(b)
     assert upload(client,e,b.getvalue(),'people.xls').json()['imported']==1
-    assert client.get('/api/dashboard').json()['revenue']==2475
+    assert client.get('/api/dashboard').json()['actual_spend']==2475
 
 def test_separate_merge_aliases_and_totals(client):
+    # V1.1 retains all original identities; costs and attributed value are separate.
     e=event(client)
     upload(client,e,b'Nome completo,Email,Importo\nGiulia Rossi,g@example.test,20\nGiulia Rosi,g@example.test,30\n')
     match=client.get('/api/matches').json()[0]
     a,b=match['a']['id'],match['b']['id']
-    assert client.post('/api/matches/decision',json={'a':a,'b':b,'action':'separate'}).status_code==200
-    assert not client.get('/api/matches').json()
-    assert client.post('/api/matches/decision',json={'a':a,'b':b,'action':'merge'}).status_code==200
+    result=client.post('/api/matches/decision',json={'a':a,'b':b,'action':'merge'})
+    assert result.status_code==200
+    link=result.json()['link_id']
     p=client.get('/api/people').json()
-    assert len(p)==1 and p[0]['value']==5000 and p[0]['visits']==1
+    assert len(p)==1 and p[0]['actual_spend']==5000 and p[0]['visits']==1
+    assert p[0]['value']==0 and p[0]['undefined_values']==1
     e2=event(client)
     upload(client,e2,b'Nome completo,Email,Importo\nGiulia Rosi,g@example.test,10\n')
     assert len(client.get('/api/people').json())==1
-    assert client.get('/api/dashboard').json()['revenue']==6000
+    assert client.get('/api/dashboard').json()['actual_spend']==6000
+    assert client.post(f'/api/identity/links/{link}/undo').json()['separated']
+    assert len(client.get('/api/people').json())==2
+    assert client.post('/api/matches/decision',json={'a':a,'b':b,'action':'separate'}).status_code==200
+    assert not client.get('/api/matches').json()
+    assert client.post('/api/matches/decision',json={'a':a,'b':b,'action':'merge'}).status_code==409
 
 def test_invalid_import_is_atomic(client):
     e=event(client)
@@ -84,7 +91,7 @@ def test_demo(client):
     assert client.post('/api/demo').status_code==200
     assert client.post('/api/demo').status_code==409
     d=client.get('/api/dashboard').json()
-    assert d['events']==4 and d['people']==13 and d['revenue']>d['cost']
+    assert d['events']==4 and d['people']==13 and d['actual_spend']>d['cost']
     assert client.get('/api/matches').json()
 
 def test_separation_survives_merge_and_alias_collision(client):
@@ -95,12 +102,15 @@ def test_separation_survives_merge_and_alias_collision(client):
     assert client.post('/api/matches/decision',json={'a':b,'b':c,'action':'separate'}).status_code==200
     assert client.post('/api/matches/decision',json={'a':b,'b':d,'action':'merge'}).status_code==200
     assert client.post('/api/matches/decision',json={'a':a,'b':b,'action':'merge'}).status_code==200
+    # The original b-c exclusion blocks a-c at group level; no row is moved.
+    assert client.post('/api/matches/decision',json={'a':a,'b':c,'action':'merge'}).status_code==409
     with module.db() as conn:
-        assert conn.execute('SELECT 1 FROM separate WHERE a=? AND b=?',tuple(sorted((a,c)))).fetchone()
+        assert conn.execute('SELECT 1 FROM separate WHERE a=? AND b=?',tuple(sorted((b,c)))).fetchone()
+        assert conn.execute('SELECT COUNT(*) FROM people').fetchone()[0]==4
     e2=event(client)
     upload(client,e2,b'Nome completo,Email,Importo\nAnna Rosi,a@test.it,5\n')
     assert len(client.get('/api/people').json())==2
-    assert client.get('/api/dashboard').json()['revenue']==10500
+    assert client.get('/api/dashboard').json()['actual_spend']==10500
 
 def test_blank_name_and_bad_money(client):
     assert client.post('/api/events',json={'name':'   ','date':'2026-01-01'}).status_code==422

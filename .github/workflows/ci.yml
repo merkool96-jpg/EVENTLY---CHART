@@ -17,3 +17,19 @@ jobs:
       - run: python -m pytest backend/tests -v
       - run: npm ci && npm run build && npm audit --audit-level=high
         working-directory: frontend
+      - name: Install Chromium for UI smoke test
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Verify browser workflow against an isolated database
+        shell: bash
+        run: |
+          set -euo pipefail
+          EVENTLY_DB="$RUNNER_TEMP/evently-browser.db" python -m uvicorn backend.app:app --host 127.0.0.1 --port 8001 > "$RUNNER_TEMP/evently-browser.log" 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8001/api/health > /dev/null; then break; fi
+            kill -0 "$api_pid"
+            sleep 1
+          done
+          npm run test:e2e --prefix frontend
