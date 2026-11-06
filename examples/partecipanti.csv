@@ -1,0 +1,4 @@
+Nome;Cognome;Email;Telefono;Importo
+Giulia;Rossi;giulia.rossi@example.test;3200000000;65,00
+Marco;Bianchi;marco.bianchi@example.test;3200000001;90,50
+Giulia;Rosi;giulia.rossi@example.test;;35,00
