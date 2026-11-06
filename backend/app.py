@@ -152,8 +152,9 @@ def change_status(attendance_id:int,s:Status):
 @app.get('/api/dashboard')
 def dashboard():
     with db() as c:
-        es=events_report(c)
-        ps,_,_=people_report(c)
+        report=people_report(c)
+        es=events_report(c,report)
+        ps,_,_=report
     return {'people':len(ps),'events':len(es),'attributed_value':sum(e['attributed_value'] or 0 for e in es),'undefined_events':sum(e['participant_value_cents'] is None for e in es),'actual_spend':sum(e['actual_spend'] for e in es),'cost':sum(e['cost'] for e in es),'attendance':sum(e['participants'] for e in es),'registrations':sum(e['registrations'] for e in es),'unknown':sum(e['unknown'] for e in es),'returning':sum(p['visits']>1 for p in ps),'timeline':es[::-1]}
 
 

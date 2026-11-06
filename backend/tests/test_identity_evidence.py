@@ -174,3 +174,29 @@ def test_manual_decision_always_wins_over_legacy_automatic_separation(client):
     assert client.post('/api/matches/decision',json={'a':ids[0],'b':ids[1],'action':'merge'}).status_code==409
     with module.db() as c:
         assert c.execute('SELECT COUNT(*) FROM separate').fetchone()[0]==1
+
+
+def test_blocked_matching_is_identical_to_exhaustive_matching(client,monkeypatch):
+    import random
+    from backend import identity
+    rng=random.Random(42)
+    names=['Mario Rossi','Mario Rosssi','Mario','Luca Rossi','Anna Marino','Marianna Marino','Arianna Aricò','Carlo Bianchi','Carlo','MARIO RÓSSI','Rocco Giacalone']
+    emails=['','shared@example.test','mario.rossi@gmail.com','carlo.bianchi@gmail.com','info@example.test','other@example.test']
+    phones=['','+39 333 123','39333123','320999']
+    rows=[record(rng.choice(names),rng.choice(emails),rng.choice(phones)) for _ in range(80)]
+    ids=add(client,*rows)
+    with module.db(True) as c:
+        c.execute('INSERT INTO identity_links(a,b,reason) VALUES(?,?,?)',(ids[0],ids[1],'Pre-existing group'))
+        c.execute('INSERT INTO separate VALUES(?,?)',(ids[2],ids[3]))
+    def exhaustive(people,focus=None):
+        if focus is not None:
+            a=next(p for p in people if p['id']==focus)
+            yield from ((a,b) for b in people if b['id']!=focus)
+        else:
+            yield from ((a,b) for i,a in enumerate(people) for b in people[i+1:])
+    with module.db() as c:
+        for focus in [None,ids[10],ids[35],ids[-1]]:
+            fast=identity.candidates(c,focus)
+            with monkeypatch.context() as patch:
+                patch.setattr(identity,'evidence_pairs',exhaustive)
+                assert fast==identity.candidates(c,focus)

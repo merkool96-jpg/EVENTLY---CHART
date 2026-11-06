@@ -1,6 +1,8 @@
 """Identity groups are a reversible graph. Original people and rows never move."""
 import re
 import unicodedata
+from functools import lru_cache
+from collections import defaultdict
 from fastapi import HTTPException
 
 
@@ -12,12 +14,14 @@ def full_name(s):
     return len([word for word in re.split(r'\s+', s.strip()) if len(norm(word)) > 1]) >= 2
 
 
+@lru_cache(maxsize=20000)
 def personal(email):
     local, sep, domain = email.lower().partition('@')
     generic = {'info', 'admin', 'office', 'booking', 'segreteria', 'contact', 'eventi', 'event', 'team', 'sales', 'staff', 'famiglia', 'family', 'support', 'noreply', 'no-reply', 'hello', 'assistenza', 'prenotazioni'}
     return bool(sep and '.' in domain and len(local) >= 3 and local not in generic)
 
 
+@lru_cache(maxsize=20000)
 def name_parts(name):
     """Without structured source fields, first token is given name, rest surname.
 
@@ -206,13 +210,41 @@ def identify(c, name, email, phone):
     return pid,'ambiguous' if ambiguous else ('new' if full_name(name) else 'incomplete')
 
 
+def evidence_pairs(identities, focus=None):
+    """A pair can have evidence only if given name, email or phone is shared.
+
+    Blocking is an exact superset of the existing evidence rules, not a weaker
+    threshold or a heuristic that drops candidates. Original ID order is kept.
+    """
+    by_first,by_email,by_phone = defaultdict(set),defaultdict(set),defaultdict(set)
+    people={p['id']:p for p in identities}
+    keys={}
+    for p in identities:
+        first=name_parts(p['name'])[0]
+        email=p['email'].casefold()
+        phone=norm(p['phone'])
+        keys[p['id']]=(first,email,phone)
+        for index,key in ((by_first,first),(by_email,email),(by_phone,phone)):
+            if key:
+                index[key].add(p['id'])
+    selected=[people[focus]] if focus is not None else identities
+    for a in selected:
+        neighbors=set()
+        for index,key in zip((by_first,by_email,by_phone),keys[a['id']]):
+            if key:
+                neighbors.update(index[key])
+        for pid in sorted(neighbors):
+            if (focus is not None and pid!=focus) or (focus is None and pid>a['id']):
+                yield a,people[pid]
+
+
 def candidates(c, focus=None):
     ps,membership,members = groups(c)
     blocked = {tuple(sorted((membership[a],membership[b]))) for a,b in c.execute('SELECT a,b FROM separate')}
     identities = list(ps.values())
     result = {}
     # First collect evidence from ORIGINAL identities, not fabricated root pairs.
-    pairs = ((ps[focus], b) for b in identities if b['id']!=focus) if focus is not None else ((a,b) for index,a in enumerate(identities) for b in identities[index+1:])
+    pairs = evidence_pairs(identities,focus)
     for a,b in pairs:
         ga,gb = sorted((membership[a['id']],membership[b['id']]))
         if ga==gb or (ga,gb) in blocked:

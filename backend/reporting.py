@@ -28,8 +28,8 @@ def people_report(c):
     return result,es,membership
 
 
-def events_report(c):
-    people,es,_=people_report(c)
+def events_report(c, report=None):
+    people,es,_=report if report is not None else people_report(c)
     for e in es.values():
         values=[p['event_data'][e['id']] for p in people if e['id'] in p['event_data']]
         e.update(participants=sum(v['confirmed'] for v in values),registrations=sum(not v['confirmed'] and v['registered'] for v in values),unknown=sum(not v['confirmed'] and not v['registered'] for v in values),actual_spend=sum(v['amount'] for v in values))

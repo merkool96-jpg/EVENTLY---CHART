@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Users,
@@ -142,36 +142,57 @@ function App() {
     [target, setTarget] = useState(""),
     [history, setHistory] = useState<History[]>([]),
     [imports, setImports] = useState<ImportEntry[]>([]);
-  async function refresh() {
-    try {
-      const [p, e, m, d, h, i] = await Promise.all([
-        api("/people"),
-        api("/events"),
-        api("/matches"),
-        api("/dashboard"),
-        api("/identity/history"),
-        api("/imports"),
-      ]);
-      setPeople(p);
-      setEvents(e);
-      setMatches(m);
-      setStats(d);
-      setHistory(h);
-      setImports(i);
-    } catch (e) {
-      setError(String(e));
-    }
+  const dataRequest = useRef(0);
+  const reviewRequest = useRef(0);
+  async function refresh(scope: "all" | "review" = "all") {
+    // Ignore older responses after a newer decision, without blocking the KPI.
+    const reviewVersion = ++reviewRequest.current;
+    const dataVersion =
+      scope === "all" ? ++dataRequest.current : dataRequest.current;
+    const load = (
+      path: string,
+      apply: (data: any) => void,
+      kind: "data" | "review",
+    ) => {
+      const current = () =>
+        kind === "data"
+          ? dataRequest.current === dataVersion
+          : reviewRequest.current === reviewVersion;
+      return api(path)
+        .then((value) => {
+          if (current()) apply(value);
+        })
+        .catch((error) => {
+          if (current()) setError("Aggiornamento incompleto: " + String(error));
+        });
+    };
+    const tasks = [
+      load("/matches", setMatches, "review"),
+      load("/identity/history", setHistory, "review"),
+    ];
+    if (scope === "all")
+      tasks.push(
+        load("/people", setPeople, "data"),
+        load("/events", setEvents, "data"),
+        load("/dashboard", setStats, "data"),
+        load("/imports", setImports, "data"),
+      );
+    await Promise.all(tasks);
   }
   useEffect(() => {
     void refresh();
   }, []);
-  async function act(fn: () => Promise<unknown>, message: string) {
+  async function act(
+    fn: () => Promise<unknown>,
+    message: string,
+    scope: "all" | "review" = "all",
+  ) {
     setBusy(true);
     setError("");
     try {
       await fn();
       if (message) setNotice(message);
-      await refresh();
+      await refresh(scope);
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -776,6 +797,7 @@ function App() {
                               }),
                             ),
                           "Identità mantenute separate",
+                          "review",
                         )
                       }
                     >
