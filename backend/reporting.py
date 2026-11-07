@@ -31,6 +31,8 @@ def people_report(c, include_excluded=False):
         values=[es[eid]['participant_value_cents'] for eid in confirmed]
         value=sum(v for v in values if v is not None)
         result.append({**ps[gid],'email':next((ps[i]['email'] for i in ids if ps[i]['email']),''),'phone':next((ps[i]['phone'] for i in ids if ps[i]['phone']),''),'visits':len(confirmed),'registrations':sum(v['registered'] for v in visits.values()),'unknown':sum(v['unknown'] for v in visits.values()),'absent':sum(v['absent'] for v in visits.values()),'cancelled':sum(v['cancelled'] for v in visits.values()),'conflicts':sum(v['conflict'] for v in visits.values()),'value':value,'undefined_values':sum(v is None for v in values),'actual_spend':sum(v['amount'] for v in visits.values()),'last_seen':max((es[eid]['date'] for eid in confirmed),default=None),'members':[ps[i] for i in ids],**canonical[gid],'incomplete':not (len(norm(canonical[gid]['first_name']))>1 and len(norm(canonical[gid]['last_name']))>1), 'first_seen':min((es[eid]['date'] for eid in confirmed),default=None),'event_data':visits})
+    from .crm import decorate
+    decorate(c,result,membership,es)
     # Stable passes preserve alphabetical order for ties, latest date before count.
     result.sort(key=lambda p:norm(p['name']))
     result.sort(key=lambda p:p['last_seen'] or '',reverse=True)
@@ -48,8 +50,8 @@ def events_report(c, report=None):
 
 
 def public_person(p):
-    return {k:v for k,v in p.items() if k!='event_data'}
+    return {k:v for k,v in p.items() if k!='event_data' and not k.startswith('_')}
 
 
 def matches_filter(p,q):
-    return q.casefold().strip() in ' '.join([p['name'],p['email'],p['phone'],*p.get('aliases',[])]).casefold()
+    return q.casefold().strip() in ' '.join([p['name'],p['email'],p['phone'],*p.get('aliases',[]),*(["VIP"] if p.get('vip') else []),*[t['name'] for t in p.get('tags',[])]]).casefold()

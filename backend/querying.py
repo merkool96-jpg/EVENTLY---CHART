@@ -5,6 +5,15 @@ from pydantic import BaseModel,Field,field_validator,model_validator
 from .reporting import matches_filter
 
 class Filters(BaseModel):
+    community_segment:str=''
+    segment_start:str=''
+    segment_end:str=''
+    vip:bool|None=None
+    tag_ids:list[int]=Field(default_factory=list)
+    reward_campaign:int|None=None
+    reward_status:str=''
+    asof:str=''
+
     event_id:int|None=None
     category:str=''
     start:str=''
@@ -20,7 +29,7 @@ class Filters(BaseModel):
     quality:str=''
     inactive_days:int|None=Field(default=None,ge=0)
 
-    @field_validator('start','end','last_before')
+    @field_validator('start','end','last_before','segment_start','segment_end','asof')
     @classmethod
     def valid_date(cls,value):
         if value:date.fromisoformat(value)
@@ -40,6 +49,12 @@ def select_people(report,filters=None,q='',sort='visits',direction='desc',ranked
     selected=[]
     scoped=bool(f.event_id or f.category or f.start or f.end or f.pricing)
     for original in people:
+        if f.vip is not None and original.get('vip',False)!=f.vip:continue
+        if f.tag_ids and not set(f.tag_ids)<={t['id'] for t in original.get('tags',[])}:continue
+        if (f.reward_campaign is not None or f.reward_status) and not any((f.reward_campaign is None or r['campaign_id']==f.reward_campaign) and (not f.reward_status or r['status']==f.reward_status) for r in original.get('_reward_info',[])):continue
+        if f.community_segment:
+            from .community import match
+            if not match(original,events,f.community_segment,original.get('_community_settings',{}),f.asof or None,f.segment_start,f.segment_end):continue
         if not matches_filter(original,q) or original['visits']<f.global_min_visits:continue
         p={**original};p['first_seen_global']=p['first_seen'];p['last_seen_global']=p['last_seen']
         visits={eid:v for eid,v in p['event_data'].items() if (not f.event_id or eid==f.event_id) and (not f.category or events[eid]['category']==f.category) and (not f.start or events[eid]['date']>=f.start) and (not f.end or events[eid]['date']<=f.end) and (not f.pricing or (f.pricing=='free' and events[eid]['participant_value_cents']==0) or (f.pricing=='paid' and events[eid]['participant_value_cents'] is not None and events[eid]['participant_value_cents']>0) or (f.pricing=='undefined' and events[eid]['participant_value_cents'] is None))}

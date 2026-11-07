@@ -427,6 +427,8 @@ def demo():
 
 from .v2api import register as register_v2
 register_v2(app,db,lambda:DB,DB_LOCK)
+from .v22api import register as register_v22
+register_v22(app,db)
 
 DIST=Path(__file__).parent.parent/'frontend'/'dist'
 if DIST.exists():
