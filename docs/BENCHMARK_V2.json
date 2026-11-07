@@ -1,0 +1,61 @@
+{
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "logical_cpus": 5,
+  "method": "Core API functions, wall clock, single run, warm interpreter, synthetic unique names/emails plus two controlled identity variants. No browser/network latency. Search uses the V2 paginated selector when available, legacy API otherwise. identity_review is matching core; identity_screen additionally runs V2 group preflight and impact. Imports add 110 profiles before merge/analytics/export measurements.",
+  "results": [
+    {
+      "synthetic_profiles": 2000,
+      "additional_control_profiles": 2,
+      "archive_attendance": 2000,
+      "dashboard_s": 0.064195,
+      "search_s": 0.04183,
+      "identity_review_s": 0.023386,
+      "identity_screen_s": 0.103926,
+      "imports": [
+        {
+          "rows": 10,
+          "preview_s": 0.052905,
+          "confirm_s": 0.036435
+        },
+        {
+          "rows": 100,
+          "preview_s": 0.040104,
+          "confirm_s": 0.041859
+        }
+      ],
+      "merge_s": 0.03874,
+      "keep_separate_s": 0.03627,
+      "analytics_s": 0.074477,
+      "xlsx_s": 0.668224,
+      "xlsx_bytes": 252874
+    },
+    {
+      "synthetic_profiles": 10000,
+      "additional_control_profiles": 2,
+      "archive_attendance": 10000,
+      "dashboard_s": 0.306508,
+      "search_s": 0.313826,
+      "identity_review_s": 0.109899,
+      "identity_screen_s": 0.560233,
+      "imports": [
+        {
+          "rows": 10,
+          "preview_s": 0.238438,
+          "confirm_s": 0.265043
+        },
+        {
+          "rows": 100,
+          "preview_s": 0.279306,
+          "confirm_s": 0.24966
+        }
+      ],
+      "merge_s": 0.17697,
+      "keep_separate_s": 0.024775,
+      "analytics_s": 0.437269,
+      "xlsx_s": 3.889019,
+      "xlsx_bytes": 1175442
+    }
+  ],
+  "cpu": "AMD EPYC 9V74 80-Core Processor"
+}

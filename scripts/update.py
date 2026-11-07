@@ -73,12 +73,14 @@ def apply_update(source,target,check_running=True):
     backup=target/'backend/backups'/('aggiornamento-'+stamp)
     backup.mkdir(parents=True,mode=0o700)
     database=(target/'backend/evently.db').resolve()
+    verified=None
     if database.exists():
         with sqlite3.connect(database.as_uri()+'?mode=ro',uri=True) as connection:
             if connection.execute('PRAGMA user_version').fetchone()[0]>4:
                 raise ValueError('Il database usa una versione più recente. Aggiornamento interrotto: usa un pacchetto più nuovo.')
         verified=backup_database(database)
         print('Backup database verificato:',verified,flush=True)
+    (backup/'coppia-compatibile.json').write_text(json.dumps({'database_precedente':str(verified.relative_to(target)) if verified else None,'schema_massimo_codice_nuovo':4,'istruzioni':'Per tornare indietro, usare insieme codice/ e una copia del database_precedente, con EVENTLY fermo. Non aprire schema4 con codice V1.2.'},indent=2))
     old={}
     # Preserve and verify every overwritten file before changing any source.
     for relative in files:

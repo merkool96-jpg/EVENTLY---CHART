@@ -1,0 +1,59 @@
+{
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "logical_cpus": 5,
+  "method": "Core API functions, wall clock, single run, warm interpreter, synthetic unique names/emails plus two controlled identity variants. No browser/network latency. Imports add 110 profiles before merge/analytics/export measurements.",
+  "results": [
+    {
+      "synthetic_profiles": 2000,
+      "additional_control_profiles": 2,
+      "archive_attendance": 2000,
+      "dashboard_s": 0.052998,
+      "search_s": 0.025692,
+      "identity_review_s": 0.011836,
+      "imports": [
+        {
+          "rows": 10,
+          "preview_s": 0.274661,
+          "confirm_s": 0.242515
+        },
+        {
+          "rows": 100,
+          "preview_s": 2.531427,
+          "confirm_s": 2.416658
+        }
+      ],
+      "merge_s": 0.02292,
+      "keep_separate_s": 0.003804,
+      "analytics_s": null,
+      "xlsx_s": 0.553781,
+      "xlsx_bytes": 220171
+    },
+    {
+      "synthetic_profiles": 10000,
+      "additional_control_profiles": 2,
+      "archive_attendance": 10000,
+      "dashboard_s": 0.188489,
+      "search_s": 0.17133,
+      "identity_review_s": 0.081605,
+      "imports": [
+        {
+          "rows": 10,
+          "preview_s": 1.51351,
+          "confirm_s": 1.475531
+        },
+        {
+          "rows": 100,
+          "preview_s": 13.601359,
+          "confirm_s": 13.892757
+        }
+      ],
+      "merge_s": 0.140158,
+      "keep_separate_s": 0.033674,
+      "analytics_s": null,
+      "xlsx_s": 2.902841,
+      "xlsx_bytes": 1021062
+    }
+  ],
+  "cpu": "AMD EPYC 9V74 80-Core Processor"
+}

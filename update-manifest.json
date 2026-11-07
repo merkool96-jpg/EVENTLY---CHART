@@ -1,12 +1,12 @@
 {
-  "release": "profiles-export-v1",
+  "release": "evently-v2.0.0",
   "files": {
     ".github/workflows/ci.yml": {
-      "sha256": "1d5ebee8b834419ac49c9e897e3a6825a906bf05d445f3fe2804b2aff7bb9713",
+      "sha256": "f7c6fb24cd89dbb192b2ed5b55f0a56de33b42c4b78a75e65edd71021950ec05",
       "executable": false
     },
     ".gitignore": {
-      "sha256": "11285b270f98d7057400556d655a294a3bef3f45d9fb5be673d9ed307b21b83e",
+      "sha256": "70bc4bd2c9cedff15d1100ce9f813d0934ec9448ccfa663c9d63f9acff597862",
       "executable": false
     },
     "AGGIORNA_EVENTLY.command": {
@@ -22,11 +22,11 @@
       "executable": false
     },
     "README.md": {
-      "sha256": "16345313a9697a82b855f6928d9577ad8f9b54a39ac0f5064623fa7527c2878f",
+      "sha256": "79baa6008167a1e8afdd010e07e8774761b3ddda7e398fa22bd24c3424ecc77c",
       "executable": false
     },
     "backend/app.py": {
-      "sha256": "f185bd31d9d3a4ba2fbfc8c69edeae9ac4fc4769c7f5fb3f569c92fe2a00479c",
+      "sha256": "c2ac83a61cead351c8345d5328b3bd1803b7c1ceaf1a86f3aa1f3ff7ad9757a0",
       "executable": false
     },
     "backend/backup.py": {
@@ -34,27 +34,39 @@
       "executable": false
     },
     "backend/exporting.py": {
-      "sha256": "cf830eb73bd87d44be8ff1111c910594fa3dd160e8a7e57057c91b68caebe110",
+      "sha256": "46ac75c06f73c72c3bdaa6d8bce167f88d4e4f2ac9dcdc1996c04b403cb8a658",
       "executable": false
     },
     "backend/identity.py": {
-      "sha256": "d6558d4375793d125cb29d3fc66d808c1790d4727784a071a588d776e83a5379",
+      "sha256": "39ad2ced31ab662e22719645a2a6042ad25a3b43b74a63091937ac5e9d338d67",
       "executable": false
     },
     "backend/importing.py": {
-      "sha256": "d225172050c6cf098c14dfe75ed31f05bd423d354f20777856ccdd02a4b83c01",
+      "sha256": "c9de71e2fadce2a5f0d1a1566d921bcee6beddd145e8cfbd44e94991443d596a",
       "executable": false
     },
     "backend/migrations.py": {
-      "sha256": "02dbf7daa14407382865777bac89b6d277165ff26d88b235ee8e7f67cfef4942",
+      "sha256": "b84333aad692b63e6c7a4f715c585da1cc35acaa69cbd8eb9e20733dd37f6179",
+      "executable": false
+    },
+    "backend/operations.py": {
+      "sha256": "51baf1144d0cb54c2dfb94053d133533289c3345781bc74c4ec17667fb207f7c",
+      "executable": false
+    },
+    "backend/participations.py": {
+      "sha256": "7470d781c40f53f989b849ab9c8b02af9071545ca7ee31babb8d68954e661176",
       "executable": false
     },
     "backend/profiles.py": {
-      "sha256": "1ff407d8a12f4eb21d20b154bd506ee30e1da420015512c2206b26e3ee012764",
+      "sha256": "7f8e4696fd68c33613b3de4278595ce1137ac5b69bbfca5cd9b7b836c6c4bd06",
+      "executable": false
+    },
+    "backend/querying.py": {
+      "sha256": "c10950a01f2ccbf32c3b10c8b849e87d0d1f9ed62194b67b82f3f4a874a5f134",
       "executable": false
     },
     "backend/reporting.py": {
-      "sha256": "52c78489540474c61e5988f513d9dd81fc7ac4d9c60d209bfe204c09888d6301",
+      "sha256": "4ebe16ac7754178f00890d24dccef7a77693de7ce563169430ddfdd903977da4",
       "executable": false
     },
     "backend/requirements.lock": {
@@ -66,7 +78,7 @@
       "executable": false
     },
     "backend/tests/test_app.py": {
-      "sha256": "b366b13f2fb37efad691d7e648ab0ed5b988846c534c3e554c45c550e00c87fc",
+      "sha256": "51d2dfb1419d0a4109cfdac43c58cec6b0bfea7446deb7df27340b417b723d5a",
       "executable": false
     },
     "backend/tests/test_identity_evidence.py": {
@@ -74,7 +86,7 @@
       "executable": false
     },
     "backend/tests/test_profiles_export.py": {
-      "sha256": "8c1fc0eeb02922250fa392a3c19ad4cac16d45c747cd4142e26df7c32eb29e3b",
+      "sha256": "7ca87b6bd5c2b01f2bfdc2727926430f03efe9ef2b070a8c46309d7bc04ae6f3",
       "executable": false
     },
     "backend/tests/test_revision.py": {
@@ -85,16 +97,56 @@
       "sha256": "77cdff648dc387865a79ffd01ecee9fe62eade879ada20f707cd42bdb6f927d2",
       "executable": false
     },
+    "backend/tests/test_v2_contract.py": {
+      "sha256": "f5cdaf3e4f62feb23737be969fce52d713942a26e2480469545484242f58d131",
+      "executable": false
+    },
+    "backend/v2api.py": {
+      "sha256": "22110104754dd9d25750ce7f2237845f4248065b04320f2b12ee6d9842d31bba",
+      "executable": false
+    },
+    "docs/ACCEPTANCE_MATRIX_V2.md": {
+      "sha256": "875181f3bdc3067d443692865a9e0e7a347301a220e4e2da82a99d76363fdf3f",
+      "executable": false
+    },
+    "docs/BENCHMARK_V12_COMPARISON.json": {
+      "sha256": "bfd8b8583c929bee8c6edf3df067cb0e39e0e0b548b2d09fd56af07e1498ef36",
+      "executable": false
+    },
+    "docs/BENCHMARK_V2.json": {
+      "sha256": "1decb81dccb53426b1deeccc6ee2ffadbb0b01af0deea35acbb2af29612337bd",
+      "executable": false
+    },
+    "docs/DATA_DICTIONARY_V2.md": {
+      "sha256": "5cb437aa87dea016fdf4cd9ee84bf8d3ed0a881856ce15611e94e7bd030f3056",
+      "executable": false
+    },
     "docs/IDENTITY_ENGINE_REVIEW.md": {
       "sha256": "b39f9bb6d01226ea1080584524f36ab49cc552a3e011c3a4d31e96847ffd58b9",
+      "executable": false
+    },
+    "docs/IMPLEMENTATION_PLAN_V2.md": {
+      "sha256": "603f19401757091bc9697ddd5accf2bfeeebe03a37968b73c448abdea7e07812",
+      "executable": false
+    },
+    "docs/PRODUCT_RULES_V2.md": {
+      "sha256": "67779672ddaf0d1a4cc10bd3633dcbf782c2a0161ca583aad5f5536a2ebd872d",
       "executable": false
     },
     "docs/PR_V1.1.md": {
       "sha256": "1cb024a406a20c871b5328b551c027be6eade0eb026985b9e915352e2efca306",
       "executable": false
     },
+    "docs/RELEASE_REPORT_V2.md": {
+      "sha256": "b4f8bdb3f358970f123e76c542adb00d337721fa0621c9363ecedeff5c9fb098",
+      "executable": false
+    },
     "docs/RELEASE_V1.2.md": {
       "sha256": "764e78da7163f97b06f50ae4d316de729d574f788e33467eec0dd369f1957f86",
+      "executable": false
+    },
+    "docs/UX_FLOWS_V2.md": {
+      "sha256": "f21fd7ab12feb3b6934f3848219c46c7e7cc0dbc0b86adb18295cb33875d3f4b",
       "executable": false
     },
     "examples/partecipanti.csv": {
@@ -102,19 +154,23 @@
       "executable": false
     },
     "frontend/e2e/performance.cjs": {
-      "sha256": "31e1cfca6d2cd8b31ba5a4f322f1e26330ab33b2b8826b53579c9fc630459738",
+      "sha256": "189445fd09f84a4dba1fa60614f8a381e6306b06aa998d2c0b408705973c0398",
       "executable": false
     },
     "frontend/e2e/profiles-export.cjs": {
-      "sha256": "82eab67742265a113c88cbfd04a1190e0d753c4e9092c4886094e5a06487ad8e",
+      "sha256": "54397f2f904cf3d36c905e69bce76b5cb968139f0c3f2452360740722a017d9d",
       "executable": false
     },
     "frontend/e2e/smoke.cjs": {
-      "sha256": "d59391fba4218e570da39e6eca20c724ba789872edf40d388dd9443b49da572e",
+      "sha256": "0de826419f0e7320cff0044c8c1d238f077522e2ac32a58baf017157e78d5ce8",
       "executable": false
     },
     "frontend/e2e/sorting.cjs": {
-      "sha256": "68762be1d5f2d79abb34e7c3f646e67241a8dc85f9b2717bc440ae72a2018da0",
+      "sha256": "18899cc136f8e89c77d4f74c1876ab089a5232dc114c1c5af7ef0b4f1920d712",
+      "executable": false
+    },
+    "frontend/e2e/v2.cjs": {
+      "sha256": "ee00d3432e71ba4712f7396eeb3e3a542c8a309a1034851c48b8f375b51d788d",
       "executable": false
     },
     "frontend/index.html": {
@@ -122,11 +178,11 @@
       "executable": false
     },
     "frontend/package-lock.json": {
-      "sha256": "260690cc38dc27263de50a5dc24637d283d71a643aa56d1438dff0de1c1efb59",
+      "sha256": "d4a927ac908ddf8425d41fe36c0e0342d75046276f6bcdf28990f82cbfdfdcd0",
       "executable": false
     },
     "frontend/package.json": {
-      "sha256": "e01cc6e45e55243a918e5819865ea05e2b51cbd4eef88e396a99ce96f463bffe",
+      "sha256": "a3939e6eab63b1b922f46a2e1d831cf38330665484941df8fae6f795b8e60f99",
       "executable": false
     },
     "frontend/postcss.config.js": {
@@ -138,15 +194,19 @@
       "executable": false
     },
     "frontend/src/ImportWizard.tsx": {
-      "sha256": "c7d1085c5791bd088031877ffc01fbfaec0085c6255362b7c1e16bf5edc179fe",
+      "sha256": "361b68aa9c8e4dfc27a7979daae63d4549e1f16b9853c7a6d227f0fe09f53ca8",
       "executable": false
     },
     "frontend/src/PersonDialogs.tsx": {
-      "sha256": "3f9e12abb2e2d048b5d21fdbbb44a8adebfd411a4cc1000c862dc4d765240b8d",
+      "sha256": "a75108b1a40ad051e84b0e8adb06bf4376f0f7f2dbfc9b4703684d03cba2f385",
+      "executable": false
+    },
+    "frontend/src/V2Panels.tsx": {
+      "sha256": "7b468b3708f218bbd60f17fd4e7e4f451acbe4365c68049fe0408be9047c867a",
       "executable": false
     },
     "frontend/src/main.tsx": {
-      "sha256": "f33472c23834d583554dd0245deaeabb61b5cd3deb9ee70a5e252ecbe571d092",
+      "sha256": "4a8b3d17d47a0f4b49dd1a362460003252e6a23ea6043d6aa9a5f3e1b7665077",
       "executable": false
     },
     "frontend/src/peopleSorting.ts": {
@@ -154,7 +214,7 @@
       "executable": false
     },
     "frontend/src/style.css": {
-      "sha256": "d242637551972167db78ff5189f7cb6842f565e10936be25be6230d230ebae73",
+      "sha256": "2378b04dc2761daf5e8d6882e72e00aeb1ead12873e3621719ac753b239b57eb",
       "executable": false
     },
     "frontend/tailwind.config.js": {
@@ -173,8 +233,12 @@
       "sha256": "a3d3a404a6e79bb6139d61e8e2eca6a9ee3a1329c17383a6835eb8f0049953de",
       "executable": false
     },
+    "scripts/benchmark_v2.py": {
+      "sha256": "c19e89729ace5f80f836aadf2c3b3ede9e59faf2444f2894f486539d68a97239",
+      "executable": false
+    },
     "scripts/build_update_manifest.py": {
-      "sha256": "2c3fd4e50b284b5530f5a6d8f174327dc21204f1cd0aabe99dea888a635d10ba",
+      "sha256": "5bac905a8a0e8a3d421cd7a5a67d2025bbe6d22ba6dad389ab5f2ab8be32eec7",
       "executable": false
     },
     "scripts/install.sh": {
@@ -190,7 +254,11 @@
       "executable": true
     },
     "scripts/update.py": {
-      "sha256": "98e6094d7c80b5ac5d3f6c6c6d8564e08d6b48cd67a50c8f9eca3f41687f41b0",
+      "sha256": "152e34fe551e5a7845df8e4360cc38c00a23d4890efa33b9450e266baf46c4ed",
+      "executable": false
+    },
+    "scripts/verify_v2_update.py": {
+      "sha256": "551083d27f40967ace231305ac86864b8e7b2432687def28fa93775108b834db",
       "executable": false
     }
   }

@@ -13,3 +13,13 @@ dist/
 backups/
 
 .evently-local/
+
+*.sqlite
+*.sqlite3
+*.db-journal
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+/exports/
+/attachments/
