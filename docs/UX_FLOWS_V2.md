@@ -1,0 +1,16 @@
+# Flussi V2 progettati prima dell'implementazione
+
+| Flusso | Partenza e azione | Sistema e risultato | Attesa / errore | Correzione / statistiche |
+|---|---|---|---|---|
+| A Evento/import | Importazioni → scegli/crea evento → file → foglio/riga header/mappatura → verifica righe → anteprima → conferma | Avviso eventi stessa data simili, modello mappatura; originali conservati; riepilogo e link anomalie | Pulsanti disabilitati solo mentre operazione in corso; motivi per riga, token scaduto rigenerabile | Tornare ai passi senza scritture definitive; stato scelto esplicito; aggregati dopo commit |
+| B Iscritti→presenze | Evento esistente, stesso file o nuovo elenco, scegliere confirmed | Riutilizzo fonti/identificativi validi, nessun doppio conteggio; non comparsi non diventano assenti | Preview distingue aggiornamenti da nuovi; conflitti visibili | Correzione amministrativa o undo batch; ranking immediato |
+| C Identità | Centro Verifica → dettaglio gruppi/eventi/effetto → unisci/separa/rinvia | Preflight disabilita merge bloccati con membri e ragione; scelta nome; decisioni conservate | Attesa locale e errore comprensibile, mai merge parziale | Undo link; revoca blocco con avviso senza auto-unione; ricalcolo |
+| D Anagrafica | Partecipanti/Qualità → profilo → modifica | Struttura separata, alias originali, storico, contatti con conflitti | Salvataggio visibile e controlli campi | Riaprire e correggere; non cambia presenze |
+| E Massa | Workspace evento → filtri → seleziona righe/tutti filtrati → stato → preview → conferma | Conteggio esatto; override versionati per partecipazione consolidata | Se dati cambiati preview rifiutata; caricamento e riepilogo | Undo solo se nessun successivo intervento sugli stessi record; KPI aggiornati |
+| F Analytics | Community Analytics → periodo/categoria/finestra/inattività | Storia intera per nuovo/ricorrente; coorti, affinità e denominatori espliciti | Dati insufficienti e coorte recente distinti da zero | Filtri persistono quando utile; nessuna modifica dati |
+| G Export | Partecipanti → filtri → export formato/ambito/conteggio | Query comune ai risultati, tre fogli XLSX, CSV anagrafico completo | Preparazione download, errore riprovabile | Read-only, non cambia statistiche |
+| H Backup/update/restore | Impostazioni → backup/scarica; ripristino → file → verifica copia → conferma | Integrità/schema/conteggi verificati; backup corrente prima di sostituire; update Mac da nuova cartella verso vecchia | Rifiuto incompatibilità o file corrotto, nessuna modifica prima conferma | Coppia codice/DB precedente conservata; dopo restore ricaricare le viste |
+
+Navigazione: Overview; Operatività (Eventi, Importazioni); Persone (Partecipanti, Top 50, Centro Verifica, Qualità Dati); Analisi (Community Analytics); Impostazioni. Label interne stabili per compatibilità dove possibile. Dialog hanno titolo, chiusura, campi etichettati, errore e conferma. Stati/badge comuni; tabelle paginate, non migliaia di righe nel DOM.
+
+Scelte conservative: nessun nome inventato nell'anagrafica. Etichetta provvisoria UI per persona senza nome. Assenza richiede evidenza o scelta esplicita. Export non considera un ordinamento un filtro. Le fonti escluse dalle attribuzioni restano nel report import. L'azione decide più tardi rimuove dalla coda corrente e ha una vista dei rinviati, non un blocco permanente.
