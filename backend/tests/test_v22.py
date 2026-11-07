@@ -27,10 +27,14 @@ def confirm(c,d):
 def test_1_2_3_17_dynamic_segments_vip_and_new_import(client):
     seed(visits=4)
     assert client.get('/api/v2/people',params={'filters':json.dumps({'community_segment':'super'})}).json()['total']==0
+    confirm(client,batch(client,'vip_add',[1]))
+    tid=client.post('/api/v22/tags',json={'name':'Relazione manuale'}).json()['id']
+    confirm(client,batch(client,'tag_add',[1],{'tag_ids':[tid]}))
     e=client.post('/api/events',json={'name':'Quinta','date':date.today().isoformat()}).json()['id']
     r=client.post(f'/api/events/{e}/import',files={'file':('new.csv',b'Nome completo,Email\nPersona0 Cognome0,p0@example.test\n')},data={'status':'confirmed'});assert r.status_code==200
     assert client.get('/api/v2/people',params={'filters':json.dumps({'community_segment':'super'})}).json()['total']==1
-    confirm(client,batch(client,'vip_add',[1]))
+    profile=client.get('/api/v22/people/1').json()
+    assert profile['vip'] and {t['id'] for t in profile['tags']}=={tid}
     draft=client.post('/api/v2/bulk/preview',json={'event_id':e,'status':'absent'}).json();client.post('/api/v2/bulk/'+draft['token']+'/confirm')
     assert client.get('/api/v2/people',params={'filters':json.dumps({'community_segment':'super'})}).json()['total']==0
     assert client.get('/api/v22/people/1').json()['vip']

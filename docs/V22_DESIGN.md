@@ -28,6 +28,8 @@ Schema5 additivo, backup SQLite verificato prima dell'upgrade, transazione DDL e
 - crm_tags: ID, nome/nome_normalizzato univoco (maiuscole/accenti/spazi ignorati), colore, descrizione, archivio. Il nome VIP è riservato: esiste un solo stato VIP, mai un tag VIP.
 - crm_campaigns: iniziativa con nome normalizzato univoco e archivio.
 - crm_records: ID stabile, tipo vip/tag/note/reward, scope JSON degli ID originali al momento dell'azione, payload, FK tag/campagna/evento facoltative, attivo, autore/date. Pre-unione scope singolo; operazione su gruppo scope intero. Il proprietario corrente si deriva dal gruppo identità: se lo scope ora attraversa più gruppi, il record è ambiguo e non viene duplicato. In coda fino a riassegnazione esplicita. Note/premi mantengono ID/autore/date/originali e versioni nell'audit.
+- crm_record_origins: relazione con FK verso record e persone originali; trigger sincronizzano lo scope JSON validato senza cancellare le fonti.
+- events.cost_defined: costo esplicito distinto da zero legacy non documentato; i costi legacy positivi sono riconosciuti come definiti.
 - crm_batches: anteprima con snapshot dati+CRM, selezione completa, configurazione, conferma e undo.
 - crm_audit: azione, operatore, before/after, record, batch e timestamp append-only; delete logico.
 - community_settings: soglie validate; crm_segments: definizioni/filtro salvato, non membership.

@@ -1,8 +1,8 @@
 {
-  "release": "evently-v2.1.0",
+  "release": "evently-v2.2.0",
   "files": {
     ".github/workflows/ci.yml": {
-      "sha256": "40f029680bb2ea58bd8ee59974daea4bf02f2d63e9f69903e8c49b9109aeba38",
+      "sha256": "ac1acbe5b719341b285b61809cac08a97101ec227ff5dccc9aa480278fe17425",
       "executable": false
     },
     ".gitignore": {
@@ -22,7 +22,7 @@
       "executable": false
     },
     "README.md": {
-      "sha256": "fd7a7fbcf0da13224c5d614298feeee2d38f56aa30d8a18199942ba9c0a1dfbf",
+      "sha256": "a6beb63add63d907aba4b7b3f1c8dc269906892e6c96c6f38060643232a8685e",
       "executable": false
     },
     "TROVA_EVENTLY.command": {
@@ -30,7 +30,7 @@
       "executable": true
     },
     "backend/app.py": {
-      "sha256": "b4a3d13ecd7abdaee3722f134d48df59d42fbd8a1a4e2079637acb18ec759dcf",
+      "sha256": "408b09fb81669f6e425a2b6c25e8dc76236567442264e3aa685d63da88fa605d",
       "executable": false
     },
     "backend/backup.py": {
@@ -38,7 +38,19 @@
       "executable": false
     },
     "backend/backup_info.py": {
-      "sha256": "ded89b7c52a39aaa3d3bbe9e0679d81d78c3f31f2bdd6aab70899a9b8212256b",
+      "sha256": "9ad73547abd899b8cc1697cf100f2e68c58836dffdbe3c236d443d812954c39d",
+      "executable": false
+    },
+    "backend/community.py": {
+      "sha256": "93f2538bc7ba62e40e24e96ee3b10481ddf6d87940a31e847ff39e9a448a2184",
+      "executable": false
+    },
+    "backend/crm.py": {
+      "sha256": "91cb3c5e2eb1003ed80960c601aae78180a230813284ec08382293aa82a144af",
+      "executable": false
+    },
+    "backend/crm_migration.py": {
+      "sha256": "880bb7bc4a16194e2b0898a70879857e826e542515b557561d8ea5810a3d2961",
       "executable": false
     },
     "backend/exporting.py": {
@@ -50,19 +62,27 @@
       "executable": false
     },
     "backend/importing.py": {
-      "sha256": "c9de71e2fadce2a5f0d1a1566d921bcee6beddd145e8cfbd44e94991443d596a",
+      "sha256": "4d498a396b478f32140b5887ed9436cf2d7963675de0faff4b5724ba34dd5749",
       "executable": false
     },
     "backend/migrations.py": {
-      "sha256": "b84333aad692b63e6c7a4f715c585da1cc35acaa69cbd8eb9e20733dd37f6179",
+      "sha256": "068afd06b8730146e2b8949ee4a9a9acf0d7bbd61b8bbfe206d893b64ff92f0f",
       "executable": false
     },
     "backend/operations.py": {
-      "sha256": "500fcec162b3d30602883a8543a7b53dea1c21395cd636f88506037005919a4e",
+      "sha256": "0dad2a1e40e4b2df47aa3565f0288411937d4084b775185984c073c72253b2bd",
       "executable": false
     },
     "backend/participations.py": {
       "sha256": "7470d781c40f53f989b849ab9c8b02af9071545ca7ee31babb8d68954e661176",
+      "executable": false
+    },
+    "backend/performance.py": {
+      "sha256": "002192a13ae15f77f4adc0d533ba44209fdb202698f119d04810f728bbc74e58",
+      "executable": false
+    },
+    "backend/post_report.py": {
+      "sha256": "9b987e4cbe798a5d884ce8a81cd09d1f602c2c02cdef7cb732ad57c8cceb7bc6",
       "executable": false
     },
     "backend/profiles.py": {
@@ -74,27 +94,39 @@
       "executable": false
     },
     "backend/querying.py": {
-      "sha256": "c06e262156e0a382b78c2f529c25b8027638ae5c0554390d849a734f0f3c2dcd",
+      "sha256": "7305e5e6ef546cce59c397b64fc68e65022629d0a46f101b178bbd956c0fbb73",
       "executable": false
     },
     "backend/reporting.py": {
-      "sha256": "4ebe16ac7754178f00890d24dccef7a77693de7ce563169430ddfdd903977da4",
+      "sha256": "d5b0b047e9a693f70b6dc0393b18e00800aa73349e5c538de3e7723821b50942",
       "executable": false
     },
     "backend/requirements.lock": {
-      "sha256": "6a9014bef09edc8357363ca666d20da6ffec0557d783cdc77ec6d732d003efde",
+      "sha256": "1043f1318301727719127196cea7dbab4f1e661a7caa377f52157c4e4e1eddea",
       "executable": false
     },
     "backend/requirements.txt": {
-      "sha256": "84b4a2878c6bfe22a82d1f982724c3141101b4215f99255f65630b2e34dd5af7",
+      "sha256": "e93db8e98664b8a3d55db2f8fe48a04aeb7ccbfbef1bfa669f2a9e0d5e1431c1",
       "executable": false
     },
     "backend/review.py": {
       "sha256": "928c67e4ff5b5779c179345c4aec494e6edc48cb6e090017fc003b1f4eabcd0d",
       "executable": false
     },
+    "backend/strategic_export.py": {
+      "sha256": "7c76627b6c3b23c5d41702515bfa13a3339745d7a3d68069d55dad07f563f301",
+      "executable": false
+    },
+    "backend/tests/seed_large_community.py": {
+      "sha256": "7811d962aec5481f4fef654c84f9736f48d11db5fbb6bf50226c4635ba892331",
+      "executable": false
+    },
     "backend/tests/test_app.py": {
       "sha256": "51d2dfb1419d0a4109cfdac43c58cec6b0bfea7446deb7df27340b417b723d5a",
+      "executable": false
+    },
+    "backend/tests/test_crm_migration.py": {
+      "sha256": "eb9b259e09f336109447b0ff7a78fb0b497889f4a7bdb64160ed1b42d2f5fe57",
       "executable": false
     },
     "backend/tests/test_find_installation.py": {
@@ -106,7 +138,7 @@
       "executable": false
     },
     "backend/tests/test_profiles_export.py": {
-      "sha256": "7ca87b6bd5c2b01f2bfdc2727926430f03efe9ef2b070a8c46309d7bc04ae6f3",
+      "sha256": "fc6e9b0f6c421c8a110a153ad43fc1ae8c6bbe3a7384c75935608ecf9be6741c",
       "executable": false
     },
     "backend/tests/test_revision.py": {
@@ -118,15 +150,23 @@
       "executable": false
     },
     "backend/tests/test_v21.py": {
-      "sha256": "e3c5c711049835f74ecd3dcdd485417a17dd0d88be0a0c8b196e8112b6f58eaf",
+      "sha256": "f70f9b229eab3c266dc3396f1ee340d47d3324875ed9fbe9d6ab36fd99370d07",
+      "executable": false
+    },
+    "backend/tests/test_v22.py": {
+      "sha256": "6236a3afb260a291b666d20c7eec6f0983fe6e4d57db40b38ac04b125f65f8c0",
       "executable": false
     },
     "backend/tests/test_v2_contract.py": {
-      "sha256": "f5cdaf3e4f62feb23737be969fce52d713942a26e2480469545484242f58d131",
+      "sha256": "5bd9a0231a3344eb603f2c9836f9ab67d16c81dcb9a84bf4c0340c729c97de7a",
+      "executable": false
+    },
+    "backend/v22api.py": {
+      "sha256": "70eafcb38143b7bcc781fcc30409083d9825656c5e0648fab23459fc4eac28a2",
       "executable": false
     },
     "backend/v2api.py": {
-      "sha256": "f0390a176feda7b3401c79cc17b9f527032e7bb35af225ae02d8c09be474fe1f",
+      "sha256": "7d616547d2ef15c0adc31989b3278160850d7ef708ab67d4f005d0f3f721e99b",
       "executable": false
     },
     "docs/ACCEPTANCE_MATRIX_V2.md": {
@@ -162,7 +202,7 @@
       "executable": false
     },
     "docs/PRODUCT_RULES_V2.md": {
-      "sha256": "67779672ddaf0d1a4cc10bd3633dcbf782c2a0161ca583aad5f5536a2ebd872d",
+      "sha256": "99c941fc9ba167c521459f65295f67249852d55f6477d181242eabfe31d7cb49",
       "executable": false
     },
     "docs/PR_V1.1.md": {
@@ -189,6 +229,18 @@
       "sha256": "f21fd7ab12feb3b6934f3848219c46c7e7cc0dbc0b86adb18295cb33875d3f4b",
       "executable": false
     },
+    "docs/V22_BENCHMARK.json": {
+      "sha256": "aafb66ad7ec1abfaa4483c0d5939369bc00a75121939d8f2d7925be63dc21762",
+      "executable": false
+    },
+    "docs/V22_DESIGN.md": {
+      "sha256": "efee268a8cf3ab0baf0d910986cf935cda1091b360ec697fca1a5cb267d9203d",
+      "executable": false
+    },
+    "docs/V22_RESULTS.md": {
+      "sha256": "cbc633f808e12fdc13f8355ba0abc2bf0a438347bd67f36ec57831751c03543c",
+      "executable": false
+    },
     "examples/partecipanti.csv": {
       "sha256": "f75c8661898fc40c9199696b9209d5fc33b14445bb29a9e90c0a31a6487d4fbf",
       "executable": false
@@ -198,7 +250,7 @@
       "executable": false
     },
     "frontend/e2e/contrast.cjs": {
-      "sha256": "0095be71ec8f099d5ee8da462d828daa44137bf319950812024213b815603054",
+      "sha256": "cda3ceec9c6d5efa0b64e5deca88fc03f04c4e8eb28180262316b3bc0236a353",
       "executable": false
     },
     "frontend/e2e/performance.cjs": {
@@ -218,11 +270,19 @@
       "executable": false
     },
     "frontend/e2e/v2.cjs": {
-      "sha256": "ee00d3432e71ba4712f7396eeb3e3a542c8a309a1034851c48b8f375b51d788d",
+      "sha256": "de7dc55da675e20f0fd3051989564b9404af3d0d22cef4e2e05a456447f682f8",
       "executable": false
     },
     "frontend/e2e/v21.cjs": {
-      "sha256": "54a05a57ca0b869f8d8b632316baad7b4491e733d0a3192a298b36c1669d66be",
+      "sha256": "8122683dee6dfcdd29efdf48069364f4bef11492352b2dd5b31eabdac06fe181",
+      "executable": false
+    },
+    "frontend/e2e/v22-large.cjs": {
+      "sha256": "6ebcacc0df9093d510eddb158df63d38285e7b4f5b1a9d33fe8d46730e855d40",
+      "executable": false
+    },
+    "frontend/e2e/v22.cjs": {
+      "sha256": "dbaa428da40fadc34cf9e8e1666c23b4de73a0630f5c9e6be29bcc60a38c47c6",
       "executable": false
     },
     "frontend/index.html": {
@@ -230,11 +290,11 @@
       "executable": false
     },
     "frontend/package-lock.json": {
-      "sha256": "5a3cab0992881009036eaf43d7768ad3d9591059e52b73faa3e48793cc482429",
+      "sha256": "3ce0d0ba645ab79e0dac353792f170424b15cf63cc5b0fdcb3c307d9fc19c28e",
       "executable": false
     },
     "frontend/package.json": {
-      "sha256": "b28faec2afaba319814aaa74497c2a02fe2368e466c1a2b120588c7625d93c30",
+      "sha256": "32de5efe92758683c5b3a5d816d262b68f3b58966f50527d7f0c88b01d079ae0",
       "executable": false
     },
     "frontend/postcss.config.js": {
@@ -245,8 +305,12 @@
       "sha256": "aa1e1e64cffcc19d6efd2fbdf4f67d32b806df4a9ba10fbba0f017389e0e1d34",
       "executable": false
     },
+    "frontend/src/CommunityUI.tsx": {
+      "sha256": "e2df925dc528548c7450a8a78a55f7e08e2a5795eb53388cabea2551c59bc906",
+      "executable": false
+    },
     "frontend/src/EventsPage.tsx": {
-      "sha256": "6bc3d8f17ba70bb8407554dd24e7287ba0f1135ccff3a93cb3d1827a87bac622",
+      "sha256": "75591ddb9f5bb3c5a4a223fe83fb6ab69e20dcf5f18fcb24a54096f9a24ee096",
       "executable": false
     },
     "frontend/src/ImportWizard.tsx": {
@@ -262,11 +326,11 @@
       "executable": false
     },
     "frontend/src/V2Panels.tsx": {
-      "sha256": "bea6e3c33235894e8b47b9b4369e9eb73bc4339f19ed88c953b7679e958a9811",
+      "sha256": "80d7dda350127678b932377cf7aa7b9d680d2154a8748c6582b238dcc9344935",
       "executable": false
     },
     "frontend/src/main.tsx": {
-      "sha256": "72a74e693c06688018c639ec7ca29ce1e069ddcaaa15d613632cec9083cbd849",
+      "sha256": "73b2a0417875006f73c964fcd4c7b5b8f57eae7c7ae3df1f2e8b587500196c73",
       "executable": false
     },
     "frontend/src/peopleSorting.ts": {
@@ -274,7 +338,7 @@
       "executable": false
     },
     "frontend/src/style.css": {
-      "sha256": "c3eaac72b2e1161ecc752518fe3536d737f5b4c72ff8e261e9eb0ebe15aa7149",
+      "sha256": "91b78b1857d1d0cf79b4225363d97d0fd3006d326121175026821ec53ec76a67",
       "executable": false
     },
     "frontend/tailwind.config.js": {
@@ -298,7 +362,7 @@
       "executable": false
     },
     "scripts/build_update_manifest.py": {
-      "sha256": "9e6a76407ef07f8f0528d235af9dd16393fbf00da8cae625a1af0988626855c7",
+      "sha256": "f8aa003492f252242e623ed511557010eb95b08853d5797cbf51738e9386469a",
       "executable": false
     },
     "scripts/find_installation.py": {
@@ -318,11 +382,11 @@
       "executable": true
     },
     "scripts/update.py": {
-      "sha256": "152e34fe551e5a7845df8e4360cc38c00a23d4890efa33b9450e266baf46c4ed",
+      "sha256": "bc945fae0b6222af9a1ea8e2e9c255a5dd0b9a53ceb787095fbbf87ded10dfff",
       "executable": false
     },
     "scripts/verify_v2_update.py": {
-      "sha256": "dbc6a165c1192c7d554237bb969526e089fb4de9a49c933bc4ef6dd1bd9d16a3",
+      "sha256": "f4eb52752a232859af69f0e87ad16f6e60fff46113951778efde12efd3a3daec",
       "executable": false
     }
   }
