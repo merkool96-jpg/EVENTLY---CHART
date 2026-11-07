@@ -1313,3 +1313,18 @@ nav button {
 :root{--green:#2f654b;--surface:#fff;--muted:#66776b;--line:#e1e8df;--space:16px;--radius:9px;--shadow:0 8px 30px #243c2510}.panel{box-shadow:var(--shadow)}aside{overflow-y:auto}.workspace-dialog{width:min(1150px,96vw)}.advanced-filters{margin:18px 0;padding:16px;background:#f5f8f2;border-radius:8px}.advanced-filters summary,details summary{cursor:pointer;font-size:13px;font-weight:600;margin-bottom:12px}.pagination{display:flex;align-items:center;justify-content:center;gap:20px;padding:20px;font-size:12px}.quality-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin:20px 0}.quality-grid button{display:block;text-align:left}.quality-grid .chosen{border-color:#5b9158;background:#edf4e8}.conflict{display:block;color:#a15135;font-size:12px}.status-pill.absent{background:#f6e6df;color:#884c32}.status-pill.cancelled{background:#ece9ef;color:#76617d}.checkbox-label{flex-direction:row;align-items:center}.workspace-dialog .metrics{grid-template-columns:repeat(3,1fr)}.workspace-dialog details{margin:20px 0}.person-cell{display:table-cell}.person-cell small{margin-top:5px}.pagination button:disabled{opacity:.4;cursor:default}.dialog button,.panel button{min-height:32px}@media(max-width:650px){.quality-grid{grid-template-columns:repeat(2,1fr)}.workspace-dialog .metrics{grid-template-columns:repeat(2,1fr)}.workspace-dialog{padding:22px 14px}.pagination{gap:10px}aside nav button{padding:9px 4px}}@media(max-width:480px){.quality-grid{grid-template-columns:1fr 1fr}.quality-grid .metric{padding:13px}.quality-grid .metric span{font-size:11px}}
 .mobile-sort{display:none}
 @media(max-width:700px){.mobile-sort{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:16px 0}.mobile-sort label{flex:1;min-width:130px}.mobile-sort button{margin-bottom:8px}}
+
+.overview-charts{display:grid;gap:24px;min-width:0}
+.dashboard-grid>.spotlight{align-self:start}
+.attendance-chart-scroll{overflow-x:auto;max-width:100%}
+.attendance-chart{list-style:none;margin:0;min-width:max-content;justify-content:flex-start;height:290px;padding-bottom:16px;gap:18px}
+.attendance-chart .bar-column{flex:1 0 84px;max-width:100px;min-width:84px}
+.attendance-chart .bar-column>span{font-size:12px;font-weight:700;color:#2f654b}
+.attendance-chart .bar{min-height:0;flex-shrink:0}
+.attendance-chart .attendance-event-name{max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.attendance-chart .bar-column small+small{margin-top:4px;white-space:nowrap}
+.attendance-data summary{cursor:pointer;color:#2f654b;margin-top:16px}
+.attendance-data caption{text-align:left;padding:12px 0;color:#617265}
+@media(max-width:700px){.attendance-panel .panel-heading{align-items:start;gap:8px}.attendance-panel .chart-footer{gap:10px;flex-wrap:wrap}}
+.overview-charts>.panel{min-width:0}
+.overview-charts .panel-heading{flex-wrap:wrap;gap:10px}

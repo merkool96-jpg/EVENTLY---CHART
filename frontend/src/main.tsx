@@ -19,6 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import "./style.css";
+import { ParticipantsChart } from "./ParticipantsChart";
 import { ImportWizard } from "./ImportWizard";
 import { MergeDialog, EditPersonDialog, ExportDialog } from "./PersonDialogs";
 import {PeoplePage,EventWorkspace,ReviewPage,QualityPage,AnalyticsPage,SettingsPage,ImportHistory,states as statusLabels} from './V2Panels';
@@ -454,6 +455,7 @@ function App() {
                 ))}
               </div>
               <div className="dashboard-grid">
+                <div className="overview-charts">
                 <section className="panel">
                   <div className="panel-heading">
                     <div>
@@ -498,6 +500,8 @@ function App() {
                     </span>
                   </div>
                 </section>
+                <ParticipantsChart events={stats.timeline}/>
+                </div>
                 <section className="panel spotlight">
                   <span className="tag">PERSONE CHE FANNO LA DIFFERENZA</span>
                   <Trophy size={31} />

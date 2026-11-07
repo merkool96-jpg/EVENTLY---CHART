@@ -9,7 +9,8 @@
     "test:e2e": "node e2e/v2.cjs",
     "test:sorting": "node e2e/sorting.cjs",
     "test:performance": "node e2e/performance.cjs",
-    "test:profiles": "node e2e/profiles-export.cjs"
+    "test:profiles": "node e2e/profiles-export.cjs",
+    "test:charts": "node e2e/attendance-chart.cjs"
   },
   "dependencies": {
     "lucide-react": "0.468.0",

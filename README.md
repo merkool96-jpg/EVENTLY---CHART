@@ -14,6 +14,8 @@ Non spostare il database e non sostituire manualmente la vecchia cartella. Il co
 
 Prerequisiti: Python 3.12+ e Node.js LTS22+ con npm. Per una nuova installazione, apri direttamente AVVIA_EVENTLY.command. Non avviare due copie contemporaneamente.
 
+In **Overview**, oltre al valore economico trovi **I partecipanti agli incontri**: presenti confermati per evento, anche gratuito, con nomi/date e tabella dei conteggi. Ogni persona conta una volta per evento; le iscrizioni senza presenza restano escluse.
+
 ## Percorsi da provare
 
 - **Eventi → Nuovo evento**: data, luogo, categoria, edizione, costo organizzativo e valore convenzionale per presenza. Null = non definito; zero = gratuito. Il valore non è un incasso.

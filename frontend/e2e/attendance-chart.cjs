@@ -1,0 +1,18 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({headless:true,executablePath:process.env.BROWSER_EXECUTABLE||undefined,args:['--no-sandbox']});try{
+ const p=await b.newPage({viewport:{width:1440,height:1100}});const errors=[];p.on('pageerror',e=>errors.push(e.message));
+ let events=[{id:1,name:'Incontro gratuito',date:'2025-10-01',participants:3,attributed_value:0},{id:2,name:'Incontro a pagamento',date:'2026-10-01',participants:10,attributed_value:20000},{id:3,name:'Solo iscrizioni',date:'2026-10-02',participants:0,attributed_value:0}];
+ await p.route('**/api/**',async route=>{assert.equal(route.request().method(),'GET','Charts must never modify data');const path=new URL(route.request().url()).pathname;await route.fulfill({json:path==='/api/dashboard'?{people:10,events:events.length,attendance:events.reduce((n,e)=>n+e.participants,0),registrations:5,unknown:0,attributed_value:20000,undefined_events:0,actual_spend:0,cost:0,returning:3,timeline:events}:[]})});
+ await p.goto(process.env.EVENTLY_URL||'http://127.0.0.1:8015');
+ await p.getByRole('heading',{name:'Il valore degli incontri',exact:true}).waitFor();
+ const panel=p.locator('.attendance-panel');await panel.getByRole('heading',{name:'I partecipanti agli incontri',exact:true}).waitFor();
+ assert.equal(await panel.getByRole('listitem').count(),3);
+ for(const [event,n] of [['Incontro gratuito',3],['Incontro a pagamento',10],['Solo iscrizioni',0]])await panel.getByRole('listitem',{name:new RegExp(event+'.*: '+n+' partecipanti confermati')}).waitFor();
+ assert.match(await panel.innerText(),/Presenze complessive\s+13/);
+ await panel.getByText('Visualizza i numeri per evento',{exact:true}).click();assert.equal(await panel.locator('tbody tr').count(),3);assert.deepEqual(await panel.locator('tbody tr td:last-child').allTextContents(),['3','10','0']);
+ await p.screenshot({path:'/tmp/evently-participants-chart-desktop.png',fullPage:true});
+ await p.setViewportSize({width:390,height:844});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await panel.getByRole('region').focus();await p.keyboard.press('ArrowRight');await p.screenshot({path:'/tmp/evently-participants-chart-mobile.png',fullPage:true});
+ events=[];await p.reload();await panel.getByText('Nessun evento disponibile.',{exact:false}).waitFor();assert.equal(await panel.getByRole('listitem').count(),0);assert.deepEqual(errors,[]);
+ console.log('Grafico presenze: valori 3/10/0, gratuito distinto dal valore economico, totale13, date con anno, tabella accessibile, vuoto e mobile OK');
+}finally{await b.close()}})().catch(e=>{console.error(e);process.exit(1)});

@@ -2,7 +2,7 @@
   "release": "evently-v2.0.0",
   "files": {
     ".github/workflows/ci.yml": {
-      "sha256": "f7c6fb24cd89dbb192b2ed5b55f0a56de33b42c4b78a75e65edd71021950ec05",
+      "sha256": "43a8c7497adf8494c9d44b1338715cfa1646bd9f303aa8bc88e5a7369d711b53",
       "executable": false
     },
     ".gitignore": {
@@ -22,7 +22,7 @@
       "executable": false
     },
     "README.md": {
-      "sha256": "79baa6008167a1e8afdd010e07e8774761b3ddda7e398fa22bd24c3424ecc77c",
+      "sha256": "3008035cffe8354cec26e296e86c805afd88150981b4e5de6798e8909956e0e1",
       "executable": false
     },
     "backend/app.py": {
@@ -138,7 +138,7 @@
       "executable": false
     },
     "docs/RELEASE_REPORT_V2.md": {
-      "sha256": "b4f8bdb3f358970f123e76c542adb00d337721fa0621c9363ecedeff5c9fb098",
+      "sha256": "c7e54088d7f90c532851a24ac425e2ae0409e1f4111e43142b6ba5a430603460",
       "executable": false
     },
     "docs/RELEASE_V1.2.md": {
@@ -151,6 +151,10 @@
     },
     "examples/partecipanti.csv": {
       "sha256": "f75c8661898fc40c9199696b9209d5fc33b14445bb29a9e90c0a31a6487d4fbf",
+      "executable": false
+    },
+    "frontend/e2e/attendance-chart.cjs": {
+      "sha256": "a4b4d8d3cb2d21b1fe3622213ef3515006b7b074c12d2c0d826d0991e0de6531",
       "executable": false
     },
     "frontend/e2e/performance.cjs": {
@@ -182,7 +186,7 @@
       "executable": false
     },
     "frontend/package.json": {
-      "sha256": "a3939e6eab63b1b922f46a2e1d831cf38330665484941df8fae6f795b8e60f99",
+      "sha256": "851e24a13141e17f664f8c04d6a865cc12234405cc55b0086646416e49e18bfe",
       "executable": false
     },
     "frontend/postcss.config.js": {
@@ -197,6 +201,10 @@
       "sha256": "361b68aa9c8e4dfc27a7979daae63d4549e1f16b9853c7a6d227f0fe09f53ca8",
       "executable": false
     },
+    "frontend/src/ParticipantsChart.tsx": {
+      "sha256": "5cb43847f3319d28ed3f491f827c2ae9a807ebb556259a16c7a220b8021fdb26",
+      "executable": false
+    },
     "frontend/src/PersonDialogs.tsx": {
       "sha256": "a75108b1a40ad051e84b0e8adb06bf4376f0f7f2dbfc9b4703684d03cba2f385",
       "executable": false
@@ -206,7 +214,7 @@
       "executable": false
     },
     "frontend/src/main.tsx": {
-      "sha256": "4a8b3d17d47a0f4b49dd1a362460003252e6a23ea6043d6aa9a5f3e1b7665077",
+      "sha256": "5d15626ef6538a08095b5e9cda1b244648b1a3dde42275130a8719492533e781",
       "executable": false
     },
     "frontend/src/peopleSorting.ts": {
@@ -214,7 +222,7 @@
       "executable": false
     },
     "frontend/src/style.css": {
-      "sha256": "2378b04dc2761daf5e8d6882e72e00aeb1ead12873e3621719ac753b239b57eb",
+      "sha256": "f773a3ad6d4721f773d3991189983a81e0755e4d60cad0b95354512c3b4e3bd2",
       "executable": false
     },
     "frontend/tailwind.config.js": {

@@ -37,6 +37,7 @@ jobs:
             sleep 1
           done
           npm run test:e2e --prefix frontend
+          EVENTLY_URL=http://127.0.0.1:8001 npm run test:charts --prefix frontend
           EVENTLY_URL=http://127.0.0.1:8001 npm run test:sorting --prefix frontend
           EVENTLY_URL=http://127.0.0.1:8001 npm run test:performance --prefix frontend
           EVENTLY_DB="$RUNNER_TEMP/evently-profiles.db" python -m uvicorn backend.app:app --host 127.0.0.1 --port 8003 > "$RUNNER_TEMP/evently-profiles.log" 2>&1 &

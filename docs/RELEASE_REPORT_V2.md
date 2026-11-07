@@ -74,3 +74,7 @@ Il miglioramento maggiore misurato è l'importazione di profili nuovi senza poss
 ## Collaudo sul Mac
 
 Seguire i cinque passaggi nel README con **AGGIORNA_EVENTLY.command dalla nuova cartella**, scegliendo la vecchia cartella; riaprire AVVIA dalla vecchia. Un solo pacchetto. Provare: Overview; nuovo evento; importazione di un piccolo file; contatori; iscritti→presenti dalla scheda evento e undo; Centro Verifica con scelta nome; anagrafica/ricerca alias; ordinamenti Top50; filtri/export; Analytics; backup e download. Non eseguire un ripristino di prova sui dati personali: usare una seconda installazione sintetica.
+
+## Aggiornamento grafico Overview — 7 novembre 2026
+
+Aggiunto secondo grafico indipendente dal valore economico: partecipanti confermati per evento, valori zero espliciti, nome/data con anno, totale delle presenze e tabella espandibile. Usa `dashboard.timeline[].participants` dal read-model consolidato esistente; nessuna modifica a DB/API o ai dati caricati. Grafico e tabella mostrano lo stesso insieme di eventi incluso nelle analisi. Build passata; suite Chromium `test:charts` su dati sintetici3/10/0, gratuito vs economico, totale13, vuoto, tabella e viewport390 senza overflow. Nessun dato personale usato nelle prove.
