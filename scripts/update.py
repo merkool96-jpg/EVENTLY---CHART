@@ -72,10 +72,10 @@ def apply_update(source,target,check_running=True):
     stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     backup=target/'backend/backups'/('aggiornamento-'+stamp)
     backup.mkdir(parents=True,mode=0o700)
-    database=Path(os.getenv('EVENTLY_DB',str(target/'backend/evently.db'))).resolve()
+    database=(target/'backend/evently.db').resolve()
     if database.exists():
         with sqlite3.connect(database.as_uri()+'?mode=ro',uri=True) as connection:
-            if connection.execute('PRAGMA user_version').fetchone()[0]>3:
+            if connection.execute('PRAGMA user_version').fetchone()[0]>4:
                 raise ValueError('Il database usa una versione più recente. Aggiornamento interrotto: usa un pacchetto più nuovo.')
         verified=backup_database(database)
         print('Backup database verificato:',verified,flush=True)

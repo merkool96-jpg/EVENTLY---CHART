@@ -12,3 +12,5 @@ Scelte conservative/documentate: deduplica incompleti tramite stesso file/riga o
 Non distribuire milestone intermedie. Il pacchetto unico viene generato soltanto al termine. Per prove e benchmark impostare sempre EVENTLY_DB su percorso temporaneo; la V1.2 del Mac rimane indipendente. Un limite non superato viene riportato come tale, non mascherato.
 
 Registro iniziale: A documentata; B–F pianificate. Aggiornare il registro con risultati effettivi dopo ogni milestone.
+
+Milestone B: implementato schema4 con backup, originali e struttura nominativi, cinque stati, conflitti/override, archivio distinto e filtri comuni; backend operativo di massa/analytics/restore predisposto. Regressioni: 78 test passati su EVENTLY_DB temporaneo. Due aspettative V1.2 aggiornate come pianificato: righe errate isolate conservate anziché abortire tutto; archivio mantiene storico. I test updater ora isolano la destinazione dall'ambiente di sviluppo, senza seguire un EVENTLY_DB esterno implicito.

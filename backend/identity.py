@@ -32,6 +32,12 @@ def name_parts(name):
     return (words[0], ''.join(words[1:])) if words else ('', '')
 
 
+def parts(person):
+    if person.get('name_structure')=='structured':
+        return norm(person.get('first_name','')),norm(person.get('last_name',''))
+    return name_parts(person['name'])
+
+
 def surname_typo(a, b):
     if a == b or min(len(a), len(b)) < 4 or abs(len(a)-len(b)) > 1:
         return False
@@ -43,8 +49,8 @@ def surname_typo(a, b):
 
 
 def compatible_names(a,b):
-    first_a,last_a = name_parts(a['name'])
-    first_b,last_b = name_parts(b['name'])
+    first_a,last_a = parts(a)
+    first_b,last_b = parts(b)
     return bool(first_a and first_a == first_b and last_a and last_b and (last_a == last_b or surname_typo(last_a,last_b)))
 
 
@@ -67,8 +73,8 @@ def compatible(a,b):
 
 
 def partial_email_clue(a,b):
-    first_a,last_a = name_parts(a['name'])
-    first_b,last_b = name_parts(b['name'])
+    first_a,last_a = parts(a)
+    first_b,last_b = parts(b)
     if not first_a or first_a != first_b or bool(last_a) == bool(last_b):
         return False
     partial, surname = (a,last_b) if not last_a else (b,last_a)
@@ -88,8 +94,8 @@ def evidence(a,b):
         return ('phone','Telefono coincidente; verificare il nominativo e i contatti',2)
     if contradictory_contacts(a,b):
         return None
-    first_a,last_a = name_parts(a['name'])
-    first_b,last_b = name_parts(b['name'])
+    first_a,last_a = parts(a)
+    first_b,last_b = parts(b)
     if first_a and first_a == first_b and last_a and last_b:
         if last_a == last_b:
             return ('exact_name','Nome e cognome identici, identificativi mancanti o da verificare',3)
@@ -142,7 +148,7 @@ def merge(c, a, b, reason):
     for left in members[ga]:
         for right in members[gb]:
             x,y = ps[left],ps[right]
-            if not compatible_names(x,y) and not same_email(x,y) and not same_phone(x,y) and frozenset((name_parts(x['name']),name_parts(y['name']))) not in verified_aliases:
+            if not compatible_names(x,y) and not same_email(x,y) and not same_phone(x,y) and frozenset((parts(x),parts(y))) not in verified_aliases:
                 raise HTTPException(409, 'Unione bloccata: nomi incompatibili tra i membri dei gruppi senza identificativo forte coincidente')
     for left,right in overridable:
         c.execute('DELETE FROM separate WHERE a=? AND b=?',(left,right))
@@ -178,34 +184,35 @@ def confirmed_name_aliases(c, member_ids=None):
     return aliases
 
 
-def identify(c, name, email, phone):
+def identify(c, name, email, phone, first_name='', last_name='', structure='proposed'):
     ps,membership,members = groups(c)
-    person = {'name':name,'email':email,'phone':phone}
+    person = {'name':name,'email':email,'phone':phone,'first_name':first_name,'last_name':last_name,'name_structure':structure}
     from .profiles import canonical_profiles
     canonical=canonical_profiles(c,ps,membership,members)
-    edited=[gid for gid,p in canonical.items() if p['profile_edited'] and (name_parts(p['name']),p['email'].casefold(),norm(p['phone'])) == (name_parts(name),email.casefold(),norm(phone))]
+    edited=[gid for gid,p in canonical.items() if p['profile_edited'] and (parts(p),p['email'].casefold(),norm(p['phone'])) == (parts(person),email.casefold(),norm(phone))]
     if len(edited)==1 and (full_name(name) or personal(email)):
         return edited[0],'existing'
 
-    exact = [p for p in ps.values() if (name_parts(p['name']),p['email'].casefold(),norm(p['phone'])) == (name_parts(name),email.casefold(),norm(phone))]
+    exact = [p for p in ps.values() if (parts(p),p['email'].casefold(),norm(p['phone'])) == (parts(person),email.casefold(),norm(phone))]
     # An exact original identity is reused, but name-only reuse still needs a
     # unique plausible group (homonyms with missing data must remain ambiguous).
-    plausible = {membership[p['id']] for p in ps.values() if name_parts(p['name']) == name_parts(name) and not contradictory_contacts(person,p)}
+    plausible = {membership[p['id']] for p in ps.values() if parts(p) == parts(person) and not contradictory_contacts(person,p)}
     if len(exact)==1 and (personal(email) or (full_name(name) and len(plausible)==1)):
         return exact[0]['id'],'existing'
     legacy = c.execute('SELECT person_id FROM aliases WHERE name=? AND lower(email)=? AND phone=?',(name,email,phone)).fetchall()
     if len(legacy)==1 and legacy[0]['person_id'] in ps:
         return legacy[0]['person_id'],'existing'
-    pid = c.execute('INSERT INTO people(name,email,phone) VALUES(?,?,?)',(name,email,phone)).lastrowid
+    pid = c.execute('INSERT INTO people(name,email,phone,first_name,last_name,name_structure) VALUES(?,?,?,?,?,?)',(name,email,phone,first_name,last_name,structure)).lastrowid
     shared = any(same_email(person,p) and not compatible_names(person,p) for p in ps.values())
     email_candidates = [p for p in ps.values() if personal(email) and same_email(person,p) and compatible(person,p) and not shared]
-    name_candidates = [p for p in ps.values() if full_name(name) and name_parts(name)==name_parts(p['name']) and compatible(person,p)]
+    name_candidates = [p for p in ps.values() if full_name(name) and parts(person)==parts(p) and compatible(person,p)]
     possible = {membership[p['id']] for p in email_candidates+name_candidates}
+    if structure=='surname_only':possible=set()
     if len(possible)==1 and not shared:
         gid = next(iter(possible))
         aliases = confirmed_name_aliases(c, set(members[gid]))
         def group_safe(p):
-            alias = frozenset((name_parts(name),name_parts(p['name']))) in aliases
+            alias = frozenset((parts(person),parts(p))) in aliases
             return not contradictory_contacts(person,p) and (compatible_names(person,p) or alias)
         if all(group_safe(ps[i]) for i in members[gid]) and not conflicts(c,[pid],members[gid]):
             reason = 'Automatica: email personale compatibile' if email_candidates else 'Presunta: nome e cognome esatti, candidato univoco'
@@ -226,7 +233,7 @@ def evidence_pairs(identities, focus=None):
     people={p['id']:p for p in identities}
     keys={}
     for p in identities:
-        first=name_parts(p['name'])[0]
+        first=parts(p)[0]
         email=p['email'].casefold()
         phone=norm(p['phone'])
         keys[p['id']]=(first,email,phone)
@@ -244,16 +251,17 @@ def evidence_pairs(identities, focus=None):
                 yield a,people[pid]
 
 
-def candidates(c, focus=None):
+def candidates(c, focus=None, deferred=False):
     ps,membership,members = groups(c)
     blocked = {tuple(sorted((membership[a],membership[b]))) for a,b in c.execute('SELECT a,b FROM separate')}
+    deferred_groups={tuple(sorted((membership[a],membership[b]))) for a,b in c.execute('SELECT a,b FROM deferred_pairs')}
     identities = list(ps.values())
     result = {}
     # First collect evidence from ORIGINAL identities, not fabricated root pairs.
     pairs = evidence_pairs(identities,focus)
     for a,b in pairs:
         ga,gb = sorted((membership[a['id']],membership[b['id']]))
-        if ga==gb or (ga,gb) in blocked:
+        if ga==gb or (ga,gb) in blocked or (focus is None and (((ga,gb) in deferred_groups)!=deferred)):
             continue
         proof = evidence(a,b)
         if not proof:

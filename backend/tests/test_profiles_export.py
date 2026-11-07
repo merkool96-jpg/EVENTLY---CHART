@@ -132,13 +132,12 @@ def test_export_csv_utf8_formula_safe_and_not_limited_to_visible_rows(client):
 
 
 def test_schema3_backup_and_original_data_preserved(tmp_path):
-    path=tmp_path/'v2.db';migrate(path)
+    path=tmp_path/'v2.db';migrate(path,target_version=2)
     with sqlite3.connect(path) as c:
-        c.execute('DROP TABLE profile_edits');c.execute('PRAGMA user_version=2')
         c.execute("INSERT INTO people(name,email) VALUES('Originale','originale@test.it')")
     migrate(path)
     with sqlite3.connect(path) as c:
-        assert c.execute('PRAGMA user_version').fetchone()[0]==3
+        assert c.execute('PRAGMA user_version').fetchone()[0]==4
         assert c.execute('SELECT name FROM people').fetchone()[0]=='Originale'
     backup=list((tmp_path/'backups').glob('*.db'))
     assert len(backup)==1

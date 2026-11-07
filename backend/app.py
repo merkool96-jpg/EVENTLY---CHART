@@ -4,6 +4,7 @@ import os
 import secrets
 import sqlite3
 import time
+import threading
 from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
@@ -20,24 +21,23 @@ from .reporting import people_report, events_report, public_person, matches_filt
 from .profiles import canonical_profiles,save_profile,recommend
 from .exporting import export_file
 
-app = FastAPI(title='EVENTLY', version='1.2.0')
+app = FastAPI(title='EVENTLY', version='2.0.0')
 DB = os.getenv('EVENTLY_DB', str(Path(__file__).parent / 'evently.db'))
 
 
+DB_LOCK=threading.RLock()
+
 @contextmanager
 def db(write=False):
-    c=sqlite3.connect(DB,timeout=30)
-    c.row_factory=sqlite3.Row
-    c.execute('PRAGMA foreign_keys=ON')
-    try:
-        c.execute('BEGIN IMMEDIATE' if write else 'BEGIN')
-        yield c
-        c.commit()
-    except Exception:
-        c.rollback()
-        raise
-    finally:
-        c.close()
+    with DB_LOCK:
+        c=sqlite3.connect(DB,timeout=30);c.row_factory=sqlite3.Row
+        c.execute('PRAGMA foreign_keys=ON')
+        try:
+            c.execute('BEGIN IMMEDIATE' if write else 'BEGIN')
+            yield c;c.commit()
+        except Exception:
+            c.rollback();raise
+        finally:c.close()
 
 
 def init():
@@ -49,6 +49,9 @@ class Event(BaseModel):
     name: str = Field(min_length=1,max_length=200)
     date: date
     location: str = Field(default='',max_length=200)
+    category:str=Field(default='',max_length=100)
+    edition:str=Field(default='',max_length=100)
+    registration_complete:bool=False
     cost: int = Field(default=0,ge=0,le=10000000000)
     participant_value_cents: int | None = Field(default=None,ge=0,le=10000000000)
 
@@ -81,7 +84,7 @@ class Decision(BaseModel):
 
 
 class Status(BaseModel):
-    status: Literal['registered','confirmed','unknown']
+    status: Literal['registered','confirmed','absent','cancelled','unknown']
 
 
 def active_event(c,eid):
@@ -93,7 +96,7 @@ def active_event(c,eid):
 def health():
     with db() as c:
         version=c.execute('PRAGMA user_version').fetchone()[0]
-    return {'status':'ok','schema_version':version,'version':'1.2.0'}
+    return {'status':'ok','schema_version':version,'version':'2.0.0'}
 
 
 @app.post('/api/backup')
@@ -103,15 +106,16 @@ def backup():
 
 
 @app.get('/api/events')
-def events():
+def events(include_archived:bool=False):
     with db() as c:
-        return events_report(c)
+        return [e for e in events_report(c,people_report(c,True)) if include_archived or not e['archived']]
 
 
 @app.post('/api/events',status_code=201)
 def create_event(e:Event):
     with db(True) as c:
         eid=c.execute('INSERT INTO events(name,date,location,cost,participant_value_cents) VALUES(?,?,?,?,?)',(e.name,str(e.date),e.location,e.cost,e.participant_value_cents)).lastrowid
+        c.execute('UPDATE events SET category=?,edition=?,registration_complete=? WHERE id=?',(e.category,e.edition,int(e.registration_complete),eid))
     return {'id':eid}
 
 
@@ -119,7 +123,7 @@ def create_event(e:Event):
 def update_event(event_id:int,e:Event):
     with db(True) as c:
         active_event(c,event_id)
-        c.execute('UPDATE events SET name=?,date=?,location=?,cost=?,participant_value_cents=? WHERE id=?',(e.name,str(e.date),e.location,e.cost,e.participant_value_cents,event_id))
+        c.execute('UPDATE events SET name=?,date=?,location=?,cost=?,participant_value_cents=?,category=?,edition=?,registration_complete=? WHERE id=?',(e.name,str(e.date),e.location,e.cost,e.participant_value_cents,e.category,e.edition,int(e.registration_complete),event_id))
     return {'ok':True}
 
 
@@ -140,16 +144,20 @@ def people(q:str='',limit:int=10000,ranked:bool=False):
 
 
 @app.get('/api/exports/count')
-def export_count(q:str=''):
+def export_count(q:str='',filters:str='{}'):
     with db() as c:
-        ps,_,_=people_report(c)
-        return {'count':sum(matches_filter(p,q) for p in ps)}
+        from .querying import select_people
+        try:selection=json.loads(filters)
+        except Exception:raise HTTPException(422,'Filtri non validi')
+        return {'count':len(select_people(people_report(c),selection,q))}
 
 
 @app.get('/api/exports/participants')
-def export_participants(format:Literal['xlsx','csv']='xlsx',q:str=''):
+def export_participants(format:Literal['xlsx','csv']='xlsx',q:str='',filters:str='{}'):
     with db() as c:
-        data=export_file(c,format,q)
+        try:selection=json.loads(filters)
+        except Exception:raise HTTPException(422,'Filtri non validi')
+        data=export_file(c,format,q,selection)
     media='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if format=='xlsx' else 'text/csv; charset=utf-8'
     return Response(data,media_type=media,headers={'Content-Disposition':f'attachment; filename="EVENTLY-partecipanti.{format}"','Cache-Control':'no-store'})
 
@@ -200,8 +208,8 @@ def profile(person_id:int):
         p=next(p for p in ps if p['id']==membership[person_id])
         timeline=[]
         for eid,v in p['event_data'].items():
-            status='confirmed' if v['confirmed'] else ('registered' if v['registered'] else 'unknown')
-            timeline.append({**es[eid],'status':status,'amount':v['amount'],'attributed_value':es[eid]['participant_value_cents'] if status=='confirmed' else 0,'records':v['records']})
+            status=v['status']
+            timeline.append({**es[eid],'status':status,'conflict':v['conflict'],'sources':v['sources'],'amount':v['amount'],'attributed_value':es[eid]['participant_value_cents'] if status=='confirmed' else 0,'records':v['records']})
         sources=[dict(r) for r in c.execute('SELECT r.id,r.person_id,r.original,r.status,r.row_number,i.filename,i.sheet,i.created_at FROM import_rows r JOIN imports i ON i.id=r.import_id') if r['person_id'] in {m['id'] for m in p['members']}]
         return {**public_person(p),'events':sorted(timeline,key=lambda e:e['date'],reverse=True),'sources':sources}
 
@@ -212,7 +220,8 @@ def change_status(attendance_id:int,s:Status):
         row=c.execute('SELECT * FROM attendance WHERE id=?',(attendance_id,)).fetchone()
         if not row:
             raise HTTPException(404,'Registrazione non trovata')
-        c.execute('UPDATE attendance SET status=? WHERE id=?',(s.status,attendance_id))
+        _,membership,members=groups(c)
+        c.execute('INSERT INTO participation_overrides(event_id,members,status,operator,batch) VALUES(?,?,?,?,?)',(row['event_id'],json.dumps(members[membership[row['person_id']]]),s.status,'Amministratore locale','single:'+secrets.token_urlsafe(10)))
         c.execute('INSERT INTO status_history(attendance_id,old_status,new_status) VALUES(?,?,?)',(attendance_id,row['status'],s.status))
     return {'ok':True}
 
@@ -299,28 +308,29 @@ async def read_upload(file):
     return data
 
 
-def parse_upload(filename,data,sheet=None,mapping=None):
+def parse_upload(filename,data,sheet=None,mapping=None,header_row=None):
     try:
-        rows,info=read_sheet(filename,data,sheet)
+        rows,info=read_sheet(filename,data,sheet,header_row)
         selected=info['mapping'] if mapping is None else mapping
         records=records_from(rows,selected)
+        for record in records:record['row']+=info['header_row']-1
         return records,{**info,'mapping':selected}
     except Exception as e:
         raise HTTPException(400,str(e) if isinstance(e,ValueError) else 'File non leggibile o danneggiato')
 
 
 @app.post('/api/imports/inspect')
-async def inspect_import(file:UploadFile=File(...),sheet:str|None=Form(None)):
+async def inspect_import(file:UploadFile=File(...),sheet:str|None=Form(None),header_row:int|None=Form(None)):
     data=await read_upload(file)
     try:
-        _,info=read_sheet(file.filename or '',data,sheet)
+        _,info=read_sheet(file.filename or '',data,sheet,header_row)
         return info
     except Exception as e:
         raise HTTPException(400,str(e) if isinstance(e,ValueError) else 'File non leggibile o danneggiato')
 
 
 @app.post('/api/imports/preview')
-async def preview_import(file:UploadFile=File(...),event_id:int=Form(...),status:Literal['registered','confirmed']=Form('registered'),sheet:str|None=Form(None),mapping:str|None=Form(None)):
+async def preview_import(file:UploadFile=File(...),event_id:int=Form(...),status:Literal['registered','confirmed','absent','cancelled','unknown']=Form('registered'),sheet:str|None=Form(None),mapping:str|None=Form(None),header_row:int|None=Form(None),use_row_status:bool=Form(False)):
     data=await read_upload(file)
     try:
         selected=json.loads(mapping) if mapping is not None else None
@@ -328,8 +338,8 @@ async def preview_import(file:UploadFile=File(...),event_id:int=Form(...),status
             raise ValueError('Mappatura non valida')
     except (ValueError,TypeError):
         raise HTTPException(400,'Mappatura JSON non valida')
-    records,info=parse_upload(file.filename or '',data,sheet,selected)
-    config={'event_id':event_id,'status':status,'sheet':info['sheet'],'mapping':info['mapping']}
+    records,info=parse_upload(file.filename or '',data,sheet,selected,header_row)
+    config={'event_id':event_id,'status':status,'sheet':info['sheet'],'mapping':info['mapping'],'header_row':info['header_row'],'use_row_status':locals().get('use_row_status',False)}
     with db(True) as c:
         active_event(c,event_id)
         snap=snapshot(c)
@@ -353,7 +363,7 @@ def confirm_import(token:str):
         active_event(c,config['event_id'])
         if snapshot(c)!=draft['snapshot']:
             raise HTTPException(409,'I dati sono cambiati. Rigenera l’anteprima prima di confermare.')
-        records,_=parse_upload(draft['filename'],draft['original'],config['sheet'],config['mapping'])
+        records,_=parse_upload(draft['filename'],draft['original'],config['sheet'],config['mapping'],config.get('header_row'))
         summary=apply_import(c,draft['filename'],draft['original'],config,records)
         c.execute('DELETE FROM import_drafts WHERE token=?',(token,))
     return summary
@@ -375,11 +385,11 @@ def original_import(import_id:int):
 
 
 @app.post('/api/events/{event_id}/import', deprecated=True)
-async def import_file(event_id:int,file:UploadFile=File(...),status:Literal['registered','confirmed']=Form('registered')):
+async def import_file(event_id:int,file:UploadFile=File(...),status:Literal['registered','confirmed','absent','cancelled','unknown']=Form('registered')):
     """Compatibility API for scripts. UI always uses preview + explicit confirmation."""
     data=await read_upload(file)
     records,info=parse_upload(file.filename or '',data)
-    config={'event_id':event_id,'status':status,'sheet':info['sheet'],'mapping':info['mapping']}
+    config={'event_id':event_id,'status':status,'sheet':info['sheet'],'mapping':info['mapping'],'header_row':info['header_row'],'use_row_status':locals().get('use_row_status',False)}
     with db(True) as c:
         active_event(c,event_id)
         summary=apply_import(c,file.filename or '',data,config,records)
@@ -403,6 +413,9 @@ def demo():
         c.execute("INSERT INTO attendance(event_id,person_id,amount,status) VALUES(?,?,?,'confirmed')",(eid,pid,6500))
     return {'ok':True}
 
+
+from .v2api import register as register_v2
+register_v2(app,db,lambda:DB,DB_LOCK)
 
 DIST=Path(__file__).parent.parent/'frontend'/'dist'
 if DIST.exists():

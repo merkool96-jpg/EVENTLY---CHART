@@ -14,10 +14,11 @@ def safe_text(value):
     return text
 
 
-def data_rows(c,q=''):
+def data_rows(c,q='',filters=None):
     report=people_report(c)
     people,events,_=report
-    selected=[p for p in people if matches_filter(p,q)]
+    from .querying import select_people
+    selected=select_people(report,filters,q)
     people_rows=[];attendance_rows=[];event_ids=set()
     for p in selected:
         confirmed=[events[eid] for eid,v in p['event_data'].items() if v['confirmed']]
@@ -25,12 +26,13 @@ def data_rows(c,q=''):
         people_rows.append([p['id'],p['first_name'],p['last_name'],p['name'],p['email'],p['phone'],p['visits'],p['registrations'],p['unknown'],sum(e['participant_value_cents']==0 for e in confirmed),sum(e['participant_value_cents'] is not None and e['participant_value_cents']>0 for e in confirmed),Decimal(p['value'])/100,p['undefined_values'],date.fromisoformat(min(dates)) if dates else None,date.fromisoformat(max(dates)) if dates else None,'Nominativo incompleto' if p['incomplete'] else ('Nominativo completo, contatti mancanti' if not p['email'] and not p['phone'] else 'Completo'),date.fromisoformat(p['first_seen']) if p['first_seen'] else None,date.fromisoformat(p['last_seen']) if p['last_seen'] else None])
         for eid,v in p['event_data'].items():
             e=events[eid];event_ids.add(eid)
-            status='Presenza confermata' if v['confirmed'] else ('Registrazione' if v['registered'] else 'Da verificare')
+            from .participations import LABELS
+            status=LABELS[v['status']]+(' · conflitto' if v['conflict'] else '')
             value=e['participant_value_cents'] if v['confirmed'] else 0
             attendance_rows.append([p['id'],p['name'],e['name'],date.fromisoformat(e['date']),'Presenza' if v['confirmed'] else 'Iscrizione',status,None if value is None else Decimal(value)/100])
     event_rows=[]
     for e in events_report(c,report):
-        if q and e['id'] not in event_ids:
+        if (q or filters) and e['id'] not in event_ids:
             continue
         # Counts are scoped to the exported people, not the unfiltered archive.
         values=[p['event_data'][e['id']] for p in selected if e['id'] in p['event_data']]
@@ -42,8 +44,8 @@ def data_rows(c,q=''):
     ]
 
 
-def export_file(c,format,q=''):
-    tables=data_rows(c,q)
+def export_file(c,format,q='',filters=None):
+    tables=data_rows(c,q,filters)
     if format=='csv':
         out=io.StringIO(newline='');writer=csv.writer(out,delimiter=';')
         writer.writerow(tables[0][1])

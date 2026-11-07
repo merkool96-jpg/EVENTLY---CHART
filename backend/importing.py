@@ -3,15 +3,20 @@ import csv
 import hashlib
 import io
 import json
+import re
 import zipfile
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from .identity import identify, norm
+from .identity import identify, norm, full_name
 
 ALIASES = {
     'name': ['nomecompleto','nominativo','partecipante','fullname','name','nomeecognome'],
     'first': ['nome','firstname'], 'last': ['cognome','lastname','surname'],
     'email': ['email','mail','indirizzoemail'], 'phone': ['telefono','cellulare','phone','tel'],
+    'registration_id':['idregistrazione','registrationid','ticketid','idbiglietto'],
+    'order_id':['idordine','orderid','ordine'],
+    'status':['stato','status','presenza','checkin'],
+    'date':['dataregistrazione','registrationdate','date','data'],
     'amount': ['importo','totale','amount','spesa','pagato','prezzo','purchaseprice'],
 }
 
@@ -29,7 +34,7 @@ def cents(value):
         raise ValueError(f'Importo non valido: {value}')
 
 
-def read_sheet(filename, data, sheet=None):
+def read_sheet(filename, data, sheet=None, header_row=None):
     ext=Path(filename).suffix.lower()
     if ext=='.csv':
         text=data.decode('utf-8-sig')
@@ -74,9 +79,20 @@ def read_sheet(filename, data, sheet=None):
         raise ValueError('Formato supportato: XLSX, XLS o CSV')
     if not 2<=len(rows)<=20001 or any(len(row)>200 for row in rows):
         raise ValueError('Il file deve contenere da 1 a 20.000 righe e massimo 200 colonne')
+    raw_preview=rows[:20]
+    if header_row is None:
+        scores=[sum(norm(h) in {alias for aliases in ALIASES.values() for alias in aliases} for h in row) for row in rows[:min(20,len(rows)-1)]]
+        header_row=max(range(len(scores)),key=lambda i:scores[i])+1
+    if not 1<=header_row<len(rows):raise ValueError('Riga intestazione non valida')
+    rows=rows[header_row-1:]
     headers=[str(h or '') for h in rows[0]]
     mapping={key:next((i for i,h in enumerate(headers) if norm(h) in names),None) for key,names in ALIASES.items()}
-    return rows, {'sheets':sheets,'sheet':selected,'headers':headers,'mapping':mapping,'sample':rows[1:6]}
+    for key,pattern in [('email',r'[^\s@]+@[^\s@]+\.[^\s@]+'),('phone',r'\+?[\d ().-]{7,20}')]:
+        if mapping[key] is None:
+            for i in range(len(headers)):
+                values=[str(row[i] or '').strip() for row in rows[1:21] if i<len(row) and row[i] is not None]
+                if values and sum(bool(re.fullmatch(pattern,v)) for v in values)/len(values)>=.8 and i not in [v for v in mapping.values() if v is not None]:mapping[key]=i;break
+    return rows, {'header_row':header_row,'raw_preview':raw_preview,'sheets':sheets,'sheet':selected,'headers':headers,'mapping':mapping,'sample':rows[1:6]}
 
 
 def records_from(rows,mapping):
@@ -86,25 +102,26 @@ def records_from(rows,mapping):
     for column in mapping.values():
         if column is not None and (type(column) is not int or column<0 or column>=len(rows[0])):
             raise ValueError('Indice colonna non valido')
-    if all(mapping[k] is None for k in ('name','first','last')):
-        raise ValueError('Colonna nome non riconosciuta. Mappa Nome completo oppure Nome/Cognome.')
     result=[]
     for number,row in enumerate(rows[1:],2):
-        if not any(v is not None and str(v).strip() for v in row):
-            continue
+        if not any(v is not None and str(v).strip() for v in row):continue
         def value(key):
             i=mapping[key]
             return str(row[i] if row[i] is not None else '').strip() if i is not None and i<len(row) else ''
-        name=value('name') or ' '.join(filter(None,[value('first'),value('last')]))
-        if not norm(name):
-            raise ValueError(f'Riga {number}: nome mancante o non valido')
-        try:
-            amount=cents(value('amount'))
-        except ValueError as e:
-            raise ValueError(f'Riga {number}: {e}')
-        result.append({'row':number,'name':name,'email':value('email').lower(),'phone':value('phone'),'amount':amount,'original':row})
-    if not result:
-        raise ValueError('Nessun partecipante nel file')
+        first,last=value('first'),value('last')
+        name=value('name') or ' '.join(filter(None,[first,last]))
+        email=value('email').casefold();phone=value('phone')
+        valid_email=bool(re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email))
+        issue=''
+        if not norm(name) and not valid_email:issue='Nessun identificativo utile: nome/cognome o email valida mancanti'
+        elif email and not valid_email:issue='Email non valida: correggere prima di attribuire la riga'
+        try:amount=cents(value('amount'))
+        except ValueError:amount=0;issue='Spesa riportata non valida'
+        status={'presente':'confirmed','present':'confirmed','confirmed':'confirmed','checkin':'confirmed','assente':'absent','absent':'absent','annullato':'cancelled','cancelled':'cancelled','iscritto':'registered','registrato':'registered','registered':'registered','unknown':'unknown','daverificare':'unknown'}.get(norm(value('status')))
+        if value('status') and status is None:issue='Stato partecipazione non riconosciuto'
+        structure='structured' if first and last else 'surname_only' if last and not first else 'given_only' if first and not last else 'email_only' if not name else 'proposed'
+        result.append({'row':number,'name':name,'first_name':first,'last_name':last,'structure':structure,'email':email,'phone':phone,'amount':amount,'original':row,'issue':issue,'registration_id':value('registration_id'),'order_id':value('order_id'),'source_date':value('date'),'status':status})
+    if not result:raise ValueError('Nessuna riga di dati nel file')
     return result
 
 
@@ -115,7 +132,7 @@ def fingerprint(data,config):
 def snapshot(c):
     # Changes to identities, statuses or event values invalidate a stale preview.
     h=hashlib.sha256()
-    for table in ('people','events','attendance','identity_links','separate','imports','profile_edits'):
+    for table in ('people','events','attendance','identity_links','separate','imports','profile_edits','participation_overrides','attendance_evidence','source_keys'):
         h.update(table.encode())
         columns='id,fingerprint,event_id,filename,sheet,mapping,status,created_at' if table=='imports' else '*'
         h.update(json.dumps([tuple(r) for r in c.execute(f'SELECT {columns} FROM {table} ORDER BY rowid')],default=str).encode())
@@ -128,21 +145,41 @@ def apply_import(c,filename,data,config,records):
     summary={k:0 for k in ('imported','skipped','automatic','presumed','ambiguous','incomplete','new','updated')}
     if prior:
         summary['skipped']=len(records)
-        return {**summary,'import_id':prior['id'],'repeated':True}
+        return {**summary,'rows_read':len(records),'valid_rows':sum(not r.get('issue') for r in records),'issue_rows':sum(bool(r.get('issue')) for r in records),'details':[{**r,'category':'duplicate' if not r.get('issue') else 'issue'} for r in records],'import_id':prior['id'],'repeated':True}
     iid=c.execute('INSERT INTO imports(fingerprint,event_id,filename,sheet,mapping,status,original) VALUES(?,?,?,?,?,?,?)',(key,config['event_id'],filename,config['sheet'],json.dumps(config['mapping']),config['status'],data)).lastrowid
+    summary.update(rows_read=len(records),valid_rows=0,issue_rows=0,details=[])
     for record in records:
-        pid,kind=identify(c,record['name'],record['email'],record['phone'])
-        if kind in summary:
-            summary[kind]+=1
+        category='imported'
+        if record.get('issue'):
+            c.execute('INSERT INTO import_issues(import_id,row_number,original,reason) VALUES(?,?,?,?)',(iid,record['row'],json.dumps(record['original'],default=str,ensure_ascii=False),record['issue']))
+            summary['issue_rows']+=1
+            summary['details'].append({**record,'category':'issue','reason':record['issue']})
+            continue
+        summary['valid_rows']+=1
+        key_record=c.execute('SELECT person_id FROM source_keys WHERE event_id=? AND registration_id=?',(config['event_id'],record.get('registration_id',''))).fetchone() if record.get('registration_id') else None
+        if key_record:
+            pid=key_record['person_id'];kind='existing'
+            original=c.execute('SELECT * FROM people WHERE id=?',(pid,)).fetchone()
+            if record['email'] and original['email'] and record['email']!=original['email'].casefold():
+                record['issue']='ID registrazione già attribuito a un contatto differente'
+                c.execute('INSERT INTO import_issues(import_id,row_number,original,reason) VALUES(?,?,?,?)',(iid,record['row'],json.dumps(record['original'],default=str),record['issue']))
+                summary['valid_rows']-=1;summary['issue_rows']+=1;summary['details'].append({**record,'category':'issue'});continue
+        else:
+            pid,kind=identify(c,record['name'],record['email'],record['phone'],record.get('first_name',''),record.get('last_name',''),record.get('structure','proposed'))
+        if kind in summary:summary[kind]+=1
+        status=record.get('status') if config.get('use_row_status') and record.get('status') else config['status']
         old=c.execute('SELECT * FROM attendance WHERE event_id=? AND person_id=?',(config['event_id'],pid)).fetchone()
         if not old:
-            c.execute('INSERT INTO attendance(event_id,person_id,amount,status) VALUES(?,?,?,?)',(config['event_id'],pid,record['amount'],config['status']))
+            aid=c.execute('INSERT INTO attendance(event_id,person_id,amount,status) VALUES(?,?,?,?)',(config['event_id'],pid,record['amount'],status)).lastrowid
             summary['imported']+=1
         else:
-            summary['skipped']+=1
-            if old['status']!='confirmed' and config['status']=='confirmed':
-                c.execute('UPDATE attendance SET status=? WHERE id=?',('confirmed',old['id']))
-                c.execute('INSERT INTO status_history(attendance_id,old_status,new_status) VALUES(?,?,?)',(old['id'],old['status'],'confirmed'))
-                summary['updated']+=1
-        c.execute('INSERT INTO import_rows(import_id,row_number,person_id,original,status) VALUES(?,?,?,?,?)',(iid,record['row'],pid,json.dumps(record['original'],default=str,ensure_ascii=False),config['status']))
+            aid=old['id'];summary['skipped']+=1;category='duplicate'
+            if old['status']!='confirmed' and status=='confirmed':
+                c.execute('UPDATE attendance SET status=? WHERE id=?',(status,aid))
+                c.execute('INSERT INTO status_history(attendance_id,old_status,new_status) VALUES(?,?,?)',(aid,old['status'],status))
+                summary['updated']+=1;category='updated'
+        c.execute('INSERT INTO attendance_evidence(attendance_id,status,source) VALUES(?,?,?)',(aid,status,f'import:{iid}:row:{record["row"]}'))
+        if record.get('registration_id'):c.execute('INSERT OR IGNORE INTO source_keys VALUES(?,?,?)',(config['event_id'],record['registration_id'],pid))
+        c.execute('INSERT INTO import_rows(import_id,row_number,person_id,original,status) VALUES(?,?,?,?,?)',(iid,record['row'],pid,json.dumps(record['original'],default=str,ensure_ascii=False),status))
+        summary['details'].append({**record,'person_id':pid,'category':category,'identity':kind,'incomplete':not bool(record.get('first_name') and record.get('last_name')) and not full_name(record['name'])})
     return {**summary,'import_id':iid,'repeated':False}

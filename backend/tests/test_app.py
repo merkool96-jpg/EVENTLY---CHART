@@ -71,9 +71,9 @@ def test_separate_merge_aliases_and_totals(client):
 def test_invalid_import_is_atomic(client):
     e=event(client)
     r=upload(client,e,b'Nome,Importo\nAnna,20\nEva,wrong\n')
-    assert r.status_code==400
-    assert client.get('/api/people').json()==[]
-    assert upload(client,e,b'Other\ndata\n').status_code==400
+    assert r.status_code==200 and r.json()['issue_rows']==1
+    assert len(client.get('/api/people').json())==1
+    assert upload(client,e,b'Other\ndata\n').json()['issue_rows']==1
     assert upload(client,e,b'broken','bad.xlsx').status_code==400
     assert upload(client,999,b'Nome\nAnna\n').status_code==404
 
@@ -84,7 +84,7 @@ def test_event_crud_validation(client):
     assert client.post('/api/events',json={'name':'X','date':'bad'}).status_code==422
     upload(client,e,b'Nome\nAnna\n')
     assert client.delete(f'/api/events/{e}').status_code==200
-    assert not client.get('/api/people/1').json()['events']
+    assert client.get('/api/people/1').json()['events'][0]['archived']==1
     assert client.delete(f'/api/events/{e}').status_code==404
 
 def test_demo(client):
@@ -116,4 +116,4 @@ def test_blank_name_and_bad_money(client):
     assert client.post('/api/events',json={'name':'   ','date':'2026-01-01'}).status_code==422
     e=event(client)
     for value in ['NaN','Infinity','-10']:
-        assert upload(client,e,f'Nome,Importo\nAnna,{value}\n'.encode()).status_code==400
+        assert upload(client,e,f'Nome,Importo\nAnna,{value}\n'.encode()).json()['issue_rows']==1
