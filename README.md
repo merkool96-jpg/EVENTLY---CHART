@@ -167,3 +167,46 @@ Benchmark locale riproducibile sul codice prima/dopo: 2.130 profili **simulati**
 Test browser: `cd frontend && npm run test:performance`, con frontend già avviato. Usa API simulate: verifica che i KPI appaiano mentre il matching è in attesa, che la separazione non ricarichi gli aggregati e che l'unione li aggiorni. Nessuna modifica al database personale.
 
 Per ripetere il confronto senza usare dati personali: `.venv/bin/python -m scripts.benchmark_matching`. Crea un database temporaneo con 2.130 profili fittizi, confronta selezione esaustiva e indicizzata e verifica che la coda sia identica. La misura esaustiva nello script include già le nuove cache, quindi può differire dalla misura storica del codice precedente riportata sopra. Suite dopo questa ottimizzazione: 52 test API superati, più test browser di prestazioni e ordinamento. La copia Mac deve essere aggiornata: per questa correzione cambiano `backend/identity.py`, `backend/reporting.py`, `backend/app.py` e `frontend/src/main.tsx`; mantenere sempre database e backup esistenti e le dipendenze frontend dei precedenti aggiornamenti.
+
+## V1.2 · Anagrafica, unione con scelta e download dati
+
+Questa release parte da `perf/faster-identity-review` (`cd075e4`), discendente verificato delle correzioni identità (`44754b0`) e colonne ordinabili (`500a9f1`). Non sostituisce queste funzioni. Il branch della release è `feat/profiles-and-participant-export`.
+
+### Scelta del nominativo
+
+**UNISCI** apre una finestra con i due nominativi principali, il suggerimento, campi modificabili e anteprima. Il suggerimento considera presenza di nome e cognome, precedenti scelte manuali, ripetizioni consecutive e caratteri sospetti; non sceglie semplicemente il testo più lungo. “Iside Oliveti Oliveti” viene suggerito come “Iside Oliveti”, senza riscrivere l'originale. I nomi composti restano soggetti ai limiti di interpretazione già documentati e la conferma è sempre dell'amministratore.
+
+**CONFERMA UNIONE** ricontrolla i membri originali e tutte le separazioni. La scelta del nome non modifica questi controlli e non autorizza una fusione altrimenti incompatibile. La validazione dell'anagrafica e il collegamento sono nella stessa transazione: se il salvataggio fallisce, l'unione non avviene.
+
+Nel profilo, **Modifica anagrafica** permette di cambiare nome, cognome, nominativo visualizzato, email e telefono. Il nome visualizzato è un campo esplicito: modificarlo se si vuole che differisca o segua i cambi di nome/cognome. Nuovi contatti già presenti su altri profili vengono bloccati con un messaggio; un contatto condiviso già importato può rimanere invariato mentre si corregge il nome. Le scelte sono versionate nella nuova tabella `profile_edits`, senza modificare `people` o le fonti. Gli alias originali e i nominativi precedenti sono ricercabili anche se il nome principale cambia. Importazioni successive non riscrivono i campi manuali; un'identità esattamente corrispondente ai nuovi nome/email/telefono principali viene riconosciuta.
+
+Le versioni manuali sono associate al gruppo in cui sono state approvate. Dopo annullamento/separazione, un nome scelto per il gruppo unito non viene applicato a un gruppo che non comprende più i membri originari; tornano applicabili le precedenti versioni pertinenti. Lo storico non viene cancellato.
+
+### Esporta partecipanti
+
+Nella pagina **Partecipanti** il pulsante **Esporta partecipanti** permette di scegliere formato, tutti i profili oppure la ricerca attiva, e mostra il conteggio ottenuto direttamente dal database. L'ordinamento visuale non è un filtro; la Top 50 non limita l'esportazione. Sono inclusi anche profili senza presenze e oltre il limite di 10.000 profili della lista UI.
+
+- **XLSX:** fogli Partecipanti, Partecipazioni ed Eventi. Anagrafica canonica, presenze distinte, registrazioni senza presenza, stati da verificare, eventi gratuiti/positivi, subtotale attribuito e numero di valori non definiti, prima/ultima partecipazione (incluse registrazioni), prime/ultime presenze confermate in colonne distinte, completezza del nominativo e disponibilità dei contatti. Partecipazioni con data, tipo, stato e valore convenzionale. Nel foglio Eventi i conteggi rispettano i partecipanti esportati; con filtro, sono inclusi soltanto gli eventi collegati, senza filtro anche gli eventi vuoti. Gli eventi archiviati restano esclusi coerentemente con le viste attive.
+- **CSV:** elenco completo Partecipanti con gli stessi campi anagrafici/aggregati; UTF-8 con BOM, separatore `;`, importi decimali con virgola e date ISO. Per il dettaglio delle partecipazioni e degli eventi scegliere XLSX.
+- Importi XLSX numerici in euro e date come celle data, con filtri e intestazioni. Nessuna spesa reale viene spacciata per valore attribuito. Valori evento non definiti rimangono vuoti; gli aggregati mostrano il subtotale noto e il conteggio mancante.
+- Testi potenzialmente interpretabili come formule vengono neutralizzati, compresi prefissi formula preceduti da spazi o caratteri di controllo. Il contenuto esportato è calcolato in un'unica transazione di sola lettura; non modifica dati.
+
+API: `POST /api/matches/preview`, scelta opzionale `profile` nella decisione di merge, `PATCH /api/people/{id}`, `GET /api/people/{id}/history`, `GET /api/exports/count?q=…`, `GET /api/exports/participants?format=xlsx|csv&q=…`. La ricerca export usa gli stessi campi e alias della lista.
+
+### Aggiornare sul Mac senza copiare i file a mano
+
+1. Chiudere EVENTLY: nella vecchia finestra di avvio premere **Ctrl+C**.
+2. Scaricare lo ZIP del branch `feat/profiles-and-participant-export` da GitHub ed estrarlo in una cartella **diversa** da quella che si usa già.
+3. Nella cartella appena scaricata fare doppio clic su **AGGIORNA_EVENTLY.command**.
+4. Quando Finder lo chiede, selezionare la **vecchia cartella EVENTLY**, quella che contiene i dati. Non selezionare la nuova cartella scaricata.
+5. Attendere “Aggiornamento completato”, poi aprire **AVVIA_EVENTLY.command nella vecchia cartella**. Il launcher ricompila e apre il browser.
+
+L'updater funziona dal pacchetto estratto, senza Git e senza scaricare codice al momento dell'aggiornamento. Verifica gli SHA-256 del manifest contro il contenuto del pacchetto; questa verifica rileva corruzioni, non sostituisce la fiducia nella provenienza: usare soltanto lo ZIP ufficiale GitHub. Rifiuta cartelle sbagliate, percorsi protetti/esterni e collegamenti simbolici. Verifica che l'applicazione nella cartella di destinazione sia ferma. Crea e verifica un backup SQLite e una copia dei file di codice sovrascritti in `backend/backups/aggiornamento-…`. Se la copia del codice fallisce, ripristina i file precedenti.
+
+Non copia né cancella database, backup, `.env`, `.venv`, `node_modules`, build o file locali estranei al manifest. Il database rimane nella vecchia cartella; non spostarlo nella nuova. Il primo avvio V1.2 esegue una migrazione additiva allo schema **3**, con un ulteriore backup verificato prima della modifica. Se questo backup fallisce, non migra. I dati V1/V1.1 e le decisioni restano intatti. Per un eventuale ritorno a una versione precedente, usare il codice salvato **insieme a una copia del database pre-migrazione**, senza aprire schema 3 con il vecchio codice. Non sovrascrivere il database attuale per fare una prova di ripristino.
+
+L'interfaccia macOS/Finder e gli avvisi Gatekeeper non possono essere verificati dal runtime Linux: sono stati verificati la sintassi dello script, il motore di aggiornamento con backup e rollback e l'avvio dell'app nel cloud. Su macOS il primo aggiornamento va confermato dall'utente. Nessun servizio a pagamento introdotto.
+
+### Verifiche V1.2
+
+Suite backend e updater, build TypeScript/Vite e browser: scelta nominativo, suggerimento senza ripetizioni, persistenza dopo importazioni, alias ricercabili, contatti con conflitti, blocchi di gruppo non aggirabili, XLSX/CSV sicuri e non limitati alla UI, file scaricati dal browser, comportamento mobile, backup e rollback dell'updater. Il test `npm run test:profiles` richiede un database dedicato vuoto e lascia dati fittizi per diagnosi. Il manifest si rigenera come passo finale di packaging con `.venv/bin/python -m scripts.build_update_manifest`.

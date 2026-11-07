@@ -37,15 +37,13 @@ const URL = process.env.EVENTLY_URL || "http://127.0.0.1:8001";
     await page
       .getByRole("button", { name: "Importa partecipanti", exact: true })
       .click();
-    await page
-      .getByLabel("File partecipanti")
-      .setInputFiles({
-        name: "ospiti.csv",
-        mimeType: "text/csv",
-        buffer: Buffer.from(
-          "Nome completo,Email,Importo\nAnna Rossi,a@example.test,100\nAna Rossi,a@example.test,300\n",
-        ),
-      });
+    await page.getByLabel("File partecipanti").setInputFiles({
+      name: "ospiti.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        "Nome completo,Email,Importo\nAnna Rossi,a@example.test,100\nAna Rossi,a@example.test,300\n",
+      ),
+    });
     await page.getByRole("button", { name: "Genera anteprima" }).waitFor();
     await page.getByLabel("Evento di destinazione").selectOption("1");
     await page.getByRole("button", { name: "Genera anteprima" }).click();
@@ -82,6 +80,9 @@ const URL = process.env.EVENTLY_URL || "http://127.0.0.1:8001";
     assert.equal(ps[0].visits, 1);
     await page.getByRole("button", { name: "Identità", exact: true }).click();
     await page.getByRole("button", { name: "Unisci", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Conferma unione", exact: true })
+      .click();
     await page
       .getByRole("button", { name: "Annulla unione", exact: true })
       .waitFor();

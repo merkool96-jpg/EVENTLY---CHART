@@ -74,7 +74,7 @@ def prepare():
 def healthy(url):
     try:
         with urllib.request.urlopen(url + '/api/health', timeout=1) as response:
-            return json.load(response).get('schema_version') == 2
+            return json.load(response).get('schema_version', 0) >= 2
     except (OSError, ValueError, urllib.error.URLError):
         return False
 

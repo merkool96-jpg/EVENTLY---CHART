@@ -41,7 +41,19 @@ const assert = require("node:assert/strict");
       const delayPeople = path === "/api/people" && holdPeople;
       counts[path] = (counts[path] || 0) + 1;
       let data = [];
-      if (path === "/api/matches/decision") {
+      if (path === "/api/matches/preview") {
+        const make = (person) => ({
+          ...person,
+          first_name: "Mario",
+          last_name: person.id === 1 ? "Rossi" : "Rosssi",
+          display_name: person.name,
+        });
+        data = {
+          options: people.map(make),
+          recommended: { ...make(people[0]), reason: "Nome completo" },
+          members: 2,
+        };
+      } else if (path === "/api/matches/decision") {
         decided = true;
         merged = route.request().postDataJSON().action === "merge";
         data = { ok: true };
@@ -113,6 +125,9 @@ const assert = require("node:assert/strict");
     const beforeMerge = counts["/api/people"];
     await p.getByRole("button", { name: "Unisci", exact: true }).click();
     await p
+      .getByRole("button", { name: "Conferma unione", exact: true })
+      .click();
+    await p
       .getByText("Nessuna ambiguità da verificare", { exact: true })
       .waitFor();
     assert.equal(counts["/api/people"], beforeMerge + 1);
@@ -127,6 +142,9 @@ const assert = require("node:assert/strict");
     await p.getByRole("button", { name: "Unisci", exact: true }).waitFor();
     holdPeople = false;
     await p.getByRole("button", { name: "Unisci", exact: true }).click();
+    await p
+      .getByRole("button", { name: "Conferma unione", exact: true })
+      .click();
     await p
       .getByText("Nessuna ambiguità da verificare", { exact: true })
       .waitFor();

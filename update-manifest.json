@@ -1,0 +1,197 @@
+{
+  "release": "profiles-export-v1",
+  "files": {
+    ".github/workflows/ci.yml": {
+      "sha256": "1d5ebee8b834419ac49c9e897e3a6825a906bf05d445f3fe2804b2aff7bb9713",
+      "executable": false
+    },
+    ".gitignore": {
+      "sha256": "11285b270f98d7057400556d655a294a3bef3f45d9fb5be673d9ed307b21b83e",
+      "executable": false
+    },
+    "AGGIORNA_EVENTLY.command": {
+      "sha256": "34005990c5f51fceebbfb9c02de57821b919ed4c030f51ae5848baac6360c9b4",
+      "executable": true
+    },
+    "AVVIA_EVENTLY.command": {
+      "sha256": "56bf364a0f6bad72651dd402f9541b8b52989e61f0147bbdf05781540ac363a7",
+      "executable": true
+    },
+    "LEGGIMI-MAC.html": {
+      "sha256": "6634512ee725342ddc087de8a7231c3736844db2adcb16f1596ae18f262efb6a",
+      "executable": false
+    },
+    "README.md": {
+      "sha256": "16345313a9697a82b855f6928d9577ad8f9b54a39ac0f5064623fa7527c2878f",
+      "executable": false
+    },
+    "backend/app.py": {
+      "sha256": "f185bd31d9d3a4ba2fbfc8c69edeae9ac4fc4769c7f5fb3f569c92fe2a00479c",
+      "executable": false
+    },
+    "backend/backup.py": {
+      "sha256": "37b9d219f49f073e1fa8d132b23b88d2165609c62c503e5bc7c5eb16f7467672",
+      "executable": false
+    },
+    "backend/exporting.py": {
+      "sha256": "cf830eb73bd87d44be8ff1111c910594fa3dd160e8a7e57057c91b68caebe110",
+      "executable": false
+    },
+    "backend/identity.py": {
+      "sha256": "d6558d4375793d125cb29d3fc66d808c1790d4727784a071a588d776e83a5379",
+      "executable": false
+    },
+    "backend/importing.py": {
+      "sha256": "d225172050c6cf098c14dfe75ed31f05bd423d354f20777856ccdd02a4b83c01",
+      "executable": false
+    },
+    "backend/migrations.py": {
+      "sha256": "02dbf7daa14407382865777bac89b6d277165ff26d88b235ee8e7f67cfef4942",
+      "executable": false
+    },
+    "backend/profiles.py": {
+      "sha256": "1ff407d8a12f4eb21d20b154bd506ee30e1da420015512c2206b26e3ee012764",
+      "executable": false
+    },
+    "backend/reporting.py": {
+      "sha256": "52c78489540474c61e5988f513d9dd81fc7ac4d9c60d209bfe204c09888d6301",
+      "executable": false
+    },
+    "backend/requirements.lock": {
+      "sha256": "6a9014bef09edc8357363ca666d20da6ffec0557d783cdc77ec6d732d003efde",
+      "executable": false
+    },
+    "backend/requirements.txt": {
+      "sha256": "84b4a2878c6bfe22a82d1f982724c3141101b4215f99255f65630b2e34dd5af7",
+      "executable": false
+    },
+    "backend/tests/test_app.py": {
+      "sha256": "b366b13f2fb37efad691d7e648ab0ed5b988846c534c3e554c45c550e00c87fc",
+      "executable": false
+    },
+    "backend/tests/test_identity_evidence.py": {
+      "sha256": "9c77287af77f4260a54dac18a5cd8b2e1dc99d9b8f003a5d8ef87e8a0841039c",
+      "executable": false
+    },
+    "backend/tests/test_profiles_export.py": {
+      "sha256": "8c1fc0eeb02922250fa392a3c19ad4cac16d45c747cd4142e26df7c32eb29e3b",
+      "executable": false
+    },
+    "backend/tests/test_revision.py": {
+      "sha256": "a157421df2ae84cfe7dc7799355f49f1741e5e1250e8034eaffa8b5004cd822f",
+      "executable": false
+    },
+    "backend/tests/test_safe_update.py": {
+      "sha256": "77cdff648dc387865a79ffd01ecee9fe62eade879ada20f707cd42bdb6f927d2",
+      "executable": false
+    },
+    "docs/IDENTITY_ENGINE_REVIEW.md": {
+      "sha256": "b39f9bb6d01226ea1080584524f36ab49cc552a3e011c3a4d31e96847ffd58b9",
+      "executable": false
+    },
+    "docs/PR_V1.1.md": {
+      "sha256": "1cb024a406a20c871b5328b551c027be6eade0eb026985b9e915352e2efca306",
+      "executable": false
+    },
+    "docs/RELEASE_V1.2.md": {
+      "sha256": "764e78da7163f97b06f50ae4d316de729d574f788e33467eec0dd369f1957f86",
+      "executable": false
+    },
+    "examples/partecipanti.csv": {
+      "sha256": "f75c8661898fc40c9199696b9209d5fc33b14445bb29a9e90c0a31a6487d4fbf",
+      "executable": false
+    },
+    "frontend/e2e/performance.cjs": {
+      "sha256": "31e1cfca6d2cd8b31ba5a4f322f1e26330ab33b2b8826b53579c9fc630459738",
+      "executable": false
+    },
+    "frontend/e2e/profiles-export.cjs": {
+      "sha256": "82eab67742265a113c88cbfd04a1190e0d753c4e9092c4886094e5a06487ad8e",
+      "executable": false
+    },
+    "frontend/e2e/smoke.cjs": {
+      "sha256": "d59391fba4218e570da39e6eca20c724ba789872edf40d388dd9443b49da572e",
+      "executable": false
+    },
+    "frontend/e2e/sorting.cjs": {
+      "sha256": "68762be1d5f2d79abb34e7c3f646e67241a8dc85f9b2717bc440ae72a2018da0",
+      "executable": false
+    },
+    "frontend/index.html": {
+      "sha256": "b1e717ae8b9ba746120c3fb7f4b9dad50a8ed07d3ecfc45a8efc493c97ee5f93",
+      "executable": false
+    },
+    "frontend/package-lock.json": {
+      "sha256": "260690cc38dc27263de50a5dc24637d283d71a643aa56d1438dff0de1c1efb59",
+      "executable": false
+    },
+    "frontend/package.json": {
+      "sha256": "e01cc6e45e55243a918e5819865ea05e2b51cbd4eef88e396a99ce96f463bffe",
+      "executable": false
+    },
+    "frontend/postcss.config.js": {
+      "sha256": "08910ce1d5cd87d2167e9c78b77262bf985b3f07dc5037ff745ecd6a759fd0c0",
+      "executable": false
+    },
+    "frontend/public/favicon.svg": {
+      "sha256": "aa1e1e64cffcc19d6efd2fbdf4f67d32b806df4a9ba10fbba0f017389e0e1d34",
+      "executable": false
+    },
+    "frontend/src/ImportWizard.tsx": {
+      "sha256": "c7d1085c5791bd088031877ffc01fbfaec0085c6255362b7c1e16bf5edc179fe",
+      "executable": false
+    },
+    "frontend/src/PersonDialogs.tsx": {
+      "sha256": "3f9e12abb2e2d048b5d21fdbbb44a8adebfd411a4cc1000c862dc4d765240b8d",
+      "executable": false
+    },
+    "frontend/src/main.tsx": {
+      "sha256": "f33472c23834d583554dd0245deaeabb61b5cd3deb9ee70a5e252ecbe571d092",
+      "executable": false
+    },
+    "frontend/src/peopleSorting.ts": {
+      "sha256": "9028c8b60594d96e33b4ba1ae62729aa598c9fe9514af6ae635adde365a8691a",
+      "executable": false
+    },
+    "frontend/src/style.css": {
+      "sha256": "d242637551972167db78ff5189f7cb6842f565e10936be25be6230d230ebae73",
+      "executable": false
+    },
+    "frontend/tailwind.config.js": {
+      "sha256": "97de26b7cddbbd9682be48d29adcd55cdb8c22b83df27a4010560ece6de0303d",
+      "executable": false
+    },
+    "frontend/tsconfig.json": {
+      "sha256": "c7a8217ed6f9e82fe77a2baefb806c03062db2dec1722742dafb76ac3631b47e",
+      "executable": false
+    },
+    "frontend/vite.config.ts": {
+      "sha256": "1597c7706f8bd4f75cc29ba6fb783f6ec5f4dcb9531e71326d4eea5b9430dc23",
+      "executable": false
+    },
+    "scripts/benchmark_matching.py": {
+      "sha256": "a3d3a404a6e79bb6139d61e8e2eca6a9ee3a1329c17383a6835eb8f0049953de",
+      "executable": false
+    },
+    "scripts/build_update_manifest.py": {
+      "sha256": "2c3fd4e50b284b5530f5a6d8f174327dc21204f1cd0aabe99dea888a635d10ba",
+      "executable": false
+    },
+    "scripts/install.sh": {
+      "sha256": "5fe524f0fd5d427037974a50e871d771fcc49adfb9e64e3cdc9e1148a87abcd3",
+      "executable": true
+    },
+    "scripts/launch.py": {
+      "sha256": "fafbdefb9436fea9a0b4e5505aacbea9175c15b5ad3c927bd24093793479896a",
+      "executable": false
+    },
+    "scripts/start.sh": {
+      "sha256": "33c8ae497ccc77ebd4aa55b7f2abffe626ccbcc0a281085f75c2237e5fcd0df3",
+      "executable": true
+    },
+    "scripts/update.py": {
+      "sha256": "98e6094d7c80b5ac5d3f6c6c6d8564e08d6b48cd67a50c8f9eca3f41687f41b0",
+      "executable": false
+    }
+  }
+}

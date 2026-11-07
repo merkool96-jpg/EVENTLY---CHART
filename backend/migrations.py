@@ -30,7 +30,12 @@ def migrate(path):
     with sqlite3.connect(path) as c:
         version = c.execute('PRAGMA user_version').fetchone()[0]
         existing = c.execute("SELECT 1 FROM sqlite_master WHERE name='people'").fetchone()
-    if version >= 2:
+    if version >= 3:
+        return
+    if version == 2:
+        if existing:
+            backup_database(path)
+        upgrade_profiles(path)
         return
     if existing:
         backup_database(path)  # Fail closed: no schema changes if backup fails.
@@ -65,3 +70,17 @@ def migrate(path):
         ]:
             c.execute(sql)
         c.execute('PRAGMA user_version=2')
+    upgrade_profiles(path)
+
+
+def upgrade_profiles(path):
+    with sqlite3.connect(path) as c:
+        c.execute('BEGIN IMMEDIATE')
+        c.execute("""CREATE TABLE IF NOT EXISTS profile_edits(
+            id INTEGER PRIMARY KEY,person_id INTEGER NOT NULL REFERENCES people(id),
+            members TEXT NOT NULL,first_name TEXT NOT NULL,last_name TEXT NOT NULL,
+            display_name TEXT NOT NULL,email TEXT NOT NULL,phone TEXT NOT NULL,
+            reason TEXT NOT NULL,link_id INTEGER REFERENCES identity_links(id),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+        c.execute('CREATE INDEX IF NOT EXISTS profile_edits_person_idx ON profile_edits(person_id)')
+        c.execute('PRAGMA user_version=3')

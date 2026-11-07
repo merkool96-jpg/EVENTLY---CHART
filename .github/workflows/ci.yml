@@ -35,3 +35,12 @@ jobs:
           npm run test:e2e --prefix frontend
           EVENTLY_URL=http://127.0.0.1:8001 npm run test:sorting --prefix frontend
           EVENTLY_URL=http://127.0.0.1:8001 npm run test:performance --prefix frontend
+          EVENTLY_DB="$RUNNER_TEMP/evently-profiles.db" python -m uvicorn backend.app:app --host 127.0.0.1 --port 8003 > "$RUNNER_TEMP/evently-profiles.log" 2>&1 &
+          profiles_pid=$!
+          trap 'kill "$api_pid" "$profiles_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8003/api/health > /dev/null; then break; fi
+            kill -0 "$profiles_pid"
+            sleep 1
+          done
+          EVENTLY_URL=http://127.0.0.1:8003 npm run test:profiles --prefix frontend

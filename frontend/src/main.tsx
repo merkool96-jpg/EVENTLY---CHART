@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import "./style.css";
 import { ImportWizard } from "./ImportWizard";
+import { MergeDialog, EditPersonDialog, ExportDialog } from "./PersonDialogs";
 import {
   defaultPeopleSort,
   nextPeopleSort,
@@ -32,6 +33,9 @@ import {
 type Person = {
   id: number;
   name: string;
+  first_name: string;
+  last_name: string;
+  aliases: string[];
   email: string;
   phone: string;
   visits: number;
@@ -125,6 +129,12 @@ const json = (body: unknown, method = "POST") => ({
   body: JSON.stringify(body),
 });
 function App() {
+  const [mergeTarget, setMergeTarget] = useState<{
+    a: number;
+    b: number;
+  } | null>(null);
+  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [page, setPage] = useState("Dashboard"),
     [people, setPeople] = useState<Person[]>([]),
     [events, setEvents] = useState<Event[]>([]),
@@ -217,7 +227,9 @@ function App() {
   const rankedPeople = orderedPeople.filter((p) => p.visits > 0).slice(0, 50);
   const tablePeople = page === "Top 50" ? rankedPeople : orderedPeople;
   const filtered = tablePeople.filter((p) =>
-    (p.name + " " + p.email).toLowerCase().includes(query.toLowerCase()),
+    (p.name + " " + p.email + " " + p.phone + " " + (p.aliases || []).join(" "))
+      .toLowerCase()
+      .includes(query.toLowerCase()),
   );
   function sortButton(key: PeopleSortKey, label: string) {
     const active = peopleSort.key === key;
@@ -645,6 +657,17 @@ function App() {
                   />
                 </div>
               </div>
+              {page === "Partecipanti" && (
+                <div className="export-toolbar">
+                  <button
+                    className="primary"
+                    onClick={() => setExportOpen(true)}
+                  >
+                    Esporta partecipanti
+                  </button>
+                  <span>Elenco completo o ricerca attiva · XLSX / CSV</span>
+                </div>
+              )}
               <div className="sort-toolbar">
                 <span>
                   Clicca una colonna per ordinare; clicca di nuovo per
@@ -806,21 +829,7 @@ function App() {
                     <button
                       disabled={busy}
                       className="primary"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            "Unire questi gruppi? Le identità originali saranno conservate. Potrai annullare l’unione dallo storico.",
-                          )
-                        )
-                          void act(
-                            () =>
-                              api(
-                                "/matches/decision",
-                                json({ a: m.a.id, b: m.b.id, action: "merge" }),
-                              ),
-                            "Profili uniti",
-                          );
-                      }}
+                      onClick={() => setMergeTarget({ a: m.a.id, b: m.b.id })}
                     >
                       <GitMerge size={16} /> Unisci
                     </button>
@@ -1040,6 +1049,41 @@ function App() {
           </section>
         </div>
       )}
+      {mergeTarget && (
+        <MergeDialog
+          a={mergeTarget.a}
+          b={mergeTarget.b}
+          onClose={() => setMergeTarget(null)}
+          onDone={(message) => {
+            setMergeTarget(null);
+            setNotice(message);
+            void refresh();
+          }}
+        />
+      )}
+      {editingPerson && (
+        <EditPersonDialog
+          person={editingPerson}
+          onClose={() => setEditingPerson(null)}
+          onDone={() => {
+            const p = editingPerson;
+            setEditingPerson(null);
+            setNotice("Anagrafica aggiornata");
+            void refresh();
+            void showProfile(p);
+          }}
+        />
+      )}
+      {exportOpen && (
+        <ExportDialog
+          query={query}
+          onClose={() => setExportOpen(false)}
+          onDone={(message) => {
+            setExportOpen(false);
+            setNotice(message);
+          }}
+        />
+      )}
       {profile && (
         <div className="overlay">
           <section
@@ -1057,6 +1101,16 @@ function App() {
             </button>
             <span className="avatar large">{initials(profile.name)}</span>
             <h2>{profile.name}</h2>
+            <button
+              className="text-button"
+              onClick={() => {
+                setEditingPerson(profile);
+                setProfile(null);
+              }}
+            >
+              <Pencil size={15} /> Modifica anagrafica
+            </button>
+            <p className="hint">Alias: {(profile.aliases || []).join(" · ")}</p>
             <p>
               {profile.email} {profile.phone && "· " + profile.phone}
             </p>

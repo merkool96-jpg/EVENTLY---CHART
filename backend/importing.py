@@ -115,7 +115,7 @@ def fingerprint(data,config):
 def snapshot(c):
     # Changes to identities, statuses or event values invalidate a stale preview.
     h=hashlib.sha256()
-    for table in ('people','events','attendance','identity_links','separate','imports'):
+    for table in ('people','events','attendance','identity_links','separate','imports','profile_edits'):
         h.update(table.encode())
         columns='id,fingerprint,event_id,filename,sheet,mapping,status,created_at' if table=='imports' else '*'
         h.update(json.dumps([tuple(r) for r in c.execute(f'SELECT {columns} FROM {table} ORDER BY rowid')],default=str).encode())

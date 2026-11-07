@@ -1,6 +1,6 @@
 {
   "name": "evently",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "test:e2e": "node e2e/smoke.cjs",
     "test:sorting": "node e2e/sorting.cjs",
-    "test:performance": "node e2e/performance.cjs"
+    "test:performance": "node e2e/performance.cjs",
+    "test:profiles": "node e2e/profiles-export.cjs"
   },
   "dependencies": {
     "lucide-react": "0.468.0",

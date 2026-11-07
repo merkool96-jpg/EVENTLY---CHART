@@ -1,9 +1,11 @@
 """Read models: distinct confirmed events rank people; event values stay dynamic."""
 from .identity import groups, full_name, norm
+from .profiles import canonical_profiles
 
 
 def people_report(c):
     ps,membership,members=groups(c)
+    canonical=canonical_profiles(c,ps,membership,members)
     es={e['id']:dict(e) for e in c.execute('SELECT * FROM events WHERE archived=0')}
     per_group={gid:{} for gid in members}
     for row in c.execute('SELECT * FROM attendance ORDER BY id'):
@@ -20,7 +22,7 @@ def people_report(c):
         confirmed=[eid for eid,v in visits.items() if v['confirmed']]
         values=[es[eid]['participant_value_cents'] for eid in confirmed]
         value=sum(v for v in values if v is not None)
-        result.append({**ps[gid],'email':next((ps[i]['email'] for i in ids if ps[i]['email']),''),'phone':next((ps[i]['phone'] for i in ids if ps[i]['phone']),''),'visits':len(confirmed),'registrations':sum(not v['confirmed'] and v['registered'] for v in visits.values()),'unknown':sum(not v['confirmed'] and not v['registered'] for v in visits.values()),'value':value,'undefined_values':sum(v is None for v in values),'actual_spend':sum(v['amount'] for v in visits.values()),'last_seen':max((es[eid]['date'] for eid in confirmed),default=None),'members':[ps[i] for i in ids],'incomplete':not full_name(ps[gid]['name']),'event_data':visits})
+        result.append({**ps[gid],'email':next((ps[i]['email'] for i in ids if ps[i]['email']),''),'phone':next((ps[i]['phone'] for i in ids if ps[i]['phone']),''),'visits':len(confirmed),'registrations':sum(not v['confirmed'] and v['registered'] for v in visits.values()),'unknown':sum(not v['confirmed'] and not v['registered'] for v in visits.values()),'value':value,'undefined_values':sum(v is None for v in values),'actual_spend':sum(v['amount'] for v in visits.values()),'last_seen':max((es[eid]['date'] for eid in confirmed),default=None),'members':[ps[i] for i in ids],**canonical[gid],'incomplete':not full_name(canonical[gid]['first_name']+' '+canonical[gid]['last_name']), 'first_seen':min((es[eid]['date'] for eid in confirmed),default=None),'event_data':visits})
     # Stable passes preserve alphabetical order for ties, latest date before count.
     result.sort(key=lambda p:norm(p['name']))
     result.sort(key=lambda p:p['last_seen'] or '',reverse=True)
@@ -39,3 +41,7 @@ def events_report(c, report=None):
 
 def public_person(p):
     return {k:v for k,v in p.items() if k!='event_data'}
+
+
+def matches_filter(p,q):
+    return q.casefold().strip() in ' '.join([p['name'],p['email'],p['phone'],*p.get('aliases',[])]).casefold()

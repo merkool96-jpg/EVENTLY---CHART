@@ -16,9 +16,11 @@ from pydantic import BaseModel, Field, field_validator
 from .migrations import migrate, backup_database
 from .identity import groups, merge, keep_separate, split_member, candidates
 from .importing import read_sheet, records_from, apply_import, snapshot
-from .reporting import people_report, events_report, public_person
+from .reporting import people_report, events_report, public_person, matches_filter
+from .profiles import canonical_profiles,save_profile,recommend
+from .exporting import export_file
 
-app = FastAPI(title='EVENTLY', version='1.1.0')
+app = FastAPI(title='EVENTLY', version='1.2.0')
 DB = os.getenv('EVENTLY_DB', str(Path(__file__).parent / 'evently.db'))
 
 
@@ -58,10 +60,24 @@ class Event(BaseModel):
         return value.strip()
 
 
+class PersonDetails(BaseModel):
+    first_name: str = Field(min_length=1,max_length=120)
+    last_name: str = Field(default='',max_length=200)
+    display_name: str = Field(min_length=1,max_length=300)
+    email: str = Field(default='',max_length=254)
+    phone: str = Field(default='',max_length=50)
+
+
+class MergeRequest(BaseModel):
+    a: int
+    b: int
+
+
 class Decision(BaseModel):
     a: int
     b: int
     action: Literal['merge','separate']
+    profile: PersonDetails | None = None
 
 
 class Status(BaseModel):
@@ -77,7 +93,7 @@ def active_event(c,eid):
 def health():
     with db() as c:
         version=c.execute('PRAGMA user_version').fetchone()[0]
-    return {'status':'ok','schema_version':version}
+    return {'status':'ok','schema_version':version,'version':'1.2.0'}
 
 
 @app.post('/api/backup')
@@ -119,8 +135,60 @@ def delete_event(event_id:int):
 def people(q:str='',limit:int=10000,ranked:bool=False):
     with db() as c:
         ps,_,_=people_report(c)
-        ps=[public_person(p) for p in ps if (not ranked or p['visits']>0) and q.casefold() in (p['name']+' '+p['email']).casefold()]
+        ps=[public_person(p) for p in ps if (not ranked or p['visits']>0) and matches_filter(p,q)]
         return ps[:max(1,min(limit,10000))]
+
+
+@app.get('/api/exports/count')
+def export_count(q:str=''):
+    with db() as c:
+        ps,_,_=people_report(c)
+        return {'count':sum(matches_filter(p,q) for p in ps)}
+
+
+@app.get('/api/exports/participants')
+def export_participants(format:Literal['xlsx','csv']='xlsx',q:str=''):
+    with db() as c:
+        data=export_file(c,format,q)
+    media='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if format=='xlsx' else 'text/csv; charset=utf-8'
+    return Response(data,media_type=media,headers={'Content-Disposition':f'attachment; filename="EVENTLY-partecipanti.{format}"','Cache-Control':'no-store'})
+
+
+@app.post('/api/matches/preview')
+def merge_preview(d:MergeRequest):
+    if d.a==d.b:
+        raise HTTPException(400,'Seleziona due identità differenti')
+    with db(True) as c:
+        ps,membership,members=groups(c)
+        if d.a not in ps or d.b not in ps:
+            raise HTTPException(404,'Persona non trovata')
+        if membership[d.a]==membership[d.b]:
+            raise HTTPException(409,'Queste identità sono già unite')
+        canonical=canonical_profiles(c,ps,membership,members)
+        options=[canonical[membership[d.a]],canonical[membership[d.b]]]
+        c.execute('SAVEPOINT validation')
+        merge(c,d.a,d.b,'Unione manuale verificata')
+        c.execute('ROLLBACK TO validation');c.execute('RELEASE validation')
+        suggested=recommend(options)
+        suggested.update(email=options[0]['email'] or options[1]['email'],phone=options[0]['phone'] or options[1]['phone'])
+        return {'options':options,'recommended':suggested,'members':len(members[membership[d.a]])+len(members[membership[d.b]])}
+
+
+@app.patch('/api/people/{person_id}')
+def edit_person(person_id:int,details:PersonDetails):
+    with db(True) as c:
+        gid=save_profile(c,person_id,details.model_dump())
+    return {'ok':True,'person_id':gid}
+
+
+@app.get('/api/people/{person_id}/history')
+def person_history(person_id:int):
+    with db() as c:
+        ps,membership,members=groups(c)
+        if person_id not in ps:
+            raise HTTPException(404,'Persona non trovata')
+        ids=set(members[membership[person_id]])
+        return [dict(row) for row in c.execute('SELECT * FROM profile_edits ORDER BY id DESC') if row['person_id'] in ids]
 
 
 @app.get('/api/people/{person_id}')
@@ -179,7 +247,16 @@ def decide(d:Decision):
         if d.a not in ps or d.b not in ps:
             raise HTTPException(404,'Persona non trovata')
         if d.action=='merge':
+            ps0,map0,members0=groups(c)
+            canonical=canonical_profiles(c,ps0,map0,members0)
+            choices=[canonical[map0[d.a]],canonical[map0[d.b]]]
+            recommended=recommend(choices)
+            values=d.profile.model_dump() if d.profile else {k:recommended[k] for k in ('first_name','last_name','display_name')}
+            if not d.profile:
+                values.update(email=choices[0]['email'] or choices[1]['email'],phone=choices[0]['phone'] or choices[1]['phone'])
             link=merge(c,d.a,d.b,'Unione manuale verificata')
+            if link is not None:
+                save_profile(c,d.a,values,'Nominativo confermato durante unione',link)
         else:
             if membership[d.a]==membership[d.b]:
                 raise HTTPException(409,'Prima separa una delle identità dal gruppo')

@@ -181,6 +181,12 @@ def confirmed_name_aliases(c, member_ids=None):
 def identify(c, name, email, phone):
     ps,membership,members = groups(c)
     person = {'name':name,'email':email,'phone':phone}
+    from .profiles import canonical_profiles
+    canonical=canonical_profiles(c,ps,membership,members)
+    edited=[gid for gid,p in canonical.items() if p['profile_edited'] and (name_parts(p['name']),p['email'].casefold(),norm(p['phone'])) == (name_parts(name),email.casefold(),norm(phone))]
+    if len(edited)==1 and (full_name(name) or personal(email)):
+        return edited[0],'existing'
+
     exact = [p for p in ps.values() if (name_parts(p['name']),p['email'].casefold(),norm(p['phone'])) == (name_parts(name),email.casefold(),norm(phone))]
     # An exact original identity is reused, but name-only reuse still needs a
     # unique plausible group (homonyms with missing data must remain ambiguous).
