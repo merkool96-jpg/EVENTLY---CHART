@@ -120,7 +120,9 @@ def records_from(rows,mapping):
         status={'presente':'confirmed','present':'confirmed','confirmed':'confirmed','checkin':'confirmed','assente':'absent','absent':'absent','annullato':'cancelled','cancelled':'cancelled','iscritto':'registered','registrato':'registered','registered':'registered','unknown':'unknown','daverificare':'unknown'}.get(norm(value('status')))
         if value('status') and status is None:issue='Stato partecipazione non riconosciuto'
         structure='structured' if first and last else 'surname_only' if last and not first else 'given_only' if first and not last else 'email_only' if not name else 'proposed'
-        result.append({'row':number,'name':name,'first_name':first,'last_name':last,'structure':structure,'email':email,'phone':phone,'amount':amount,'original':row,'issue':issue,'registration_id':value('registration_id'),'order_id':value('order_id'),'source_date':value('date'),'status':status})
+        incomplete=not (first and last) if structure!='proposed' else not full_name(name)
+        missing=(['Nome mancante'] if structure in ('surname_only','email_only') else [])+(['Cognome mancante'] if structure in ('given_only','email_only') or (structure=='proposed' and not full_name(name)) else [])
+        result.append({'incomplete':incomplete,'missing':missing,'row':number,'name':name,'first_name':first,'last_name':last,'structure':structure,'email':email,'phone':phone,'amount':amount,'original':row,'issue':issue,'registration_id':value('registration_id'),'order_id':value('order_id'),'source_date':value('date'),'status':status})
     if not result:raise ValueError('Nessuna riga di dati nel file')
     return result
 
@@ -142,7 +144,7 @@ def snapshot(c):
 def apply_import(c,filename,data,config,records):
     key=fingerprint(data,config)
     prior=c.execute('SELECT id FROM imports WHERE fingerprint=?',(key,)).fetchone()
-    summary={k:0 for k in ('imported','skipped','automatic','presumed','ambiguous','incomplete','new','updated')}
+    summary={k:0 for k in ('imported','skipped','automatic','presumed','ambiguous','incomplete','new','new_profiles','updated')}
     if prior:
         summary['skipped']=len(records)
         return {**summary,'rows_read':len(records),'valid_rows':sum(not r.get('issue') for r in records),'issue_rows':sum(bool(r.get('issue')) for r in records),'details':[{**r,'category':'duplicate' if not r.get('issue') else 'issue'} for r in records],'import_id':prior['id'],'repeated':True}
@@ -183,6 +185,8 @@ def apply_import(c,filename,data,config,records):
                 pid,kind=identify(c,record['name'],record['email'],record['phone'],record.get('first_name',''),record.get('last_name',''),record.get('structure','proposed'))
             known_first.add(first);known_emails.add(record['email']);known_phones.add(norm(record['phone']))
         if kind in summary:summary[kind]+=1
+        if kind in ('new','incomplete','ambiguous'):summary['new_profiles']+=1
+        if record.get('incomplete') and kind!='incomplete':summary['incomplete']+=1
         status=record.get('status') if config.get('use_row_status') and record.get('status') else config['status']
         old=c.execute('SELECT * FROM attendance WHERE event_id=? AND person_id=?',(config['event_id'],pid)).fetchone()
         if not old:
@@ -197,5 +201,5 @@ def apply_import(c,filename,data,config,records):
         c.execute('INSERT INTO attendance_evidence(attendance_id,status,source) VALUES(?,?,?)',(aid,status,f'import:{iid}:row:{record["row"]}'))
         if record.get('registration_id'):c.execute('INSERT OR IGNORE INTO source_keys VALUES(?,?,?)',(config['event_id'],record['registration_id'],pid))
         c.execute('INSERT INTO import_rows(import_id,row_number,person_id,original,status) VALUES(?,?,?,?,?)',(iid,record['row'],pid,json.dumps(record['original'],default=str,ensure_ascii=False),status))
-        summary['details'].append({**record,'person_id':pid,'category':category,'identity':kind,'incomplete':not bool(record.get('first_name') and record.get('last_name')) and not full_name(record['name'])})
+        summary['details'].append({**record,'person_id':pid,'category':category,'identity':kind,'incomplete':record.get('incomplete',not full_name(record['name']))})
     return {**summary,'import_id':iid,'repeated':False}

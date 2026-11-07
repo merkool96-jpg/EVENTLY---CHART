@@ -94,7 +94,9 @@ def test_34_36_history_before_period_and_return_window(client):
     for e in (a,b):upload(client,e,'Nome completo,Email\nMario Rossi,mario@test.it\n','confirmed')
     data=client.get('/api/v2/analytics',params={'filters':json.dumps({'start':'2026-01-01'})}).json()
     assert data['new']==0 and data['returning']==1
-    old=next(e for e in data['events'] if e['id']==a);assert old['returned_after']==1
+    assert all(e['id']!=a for e in data['events'])
+    all_data=client.get('/api/v2/analytics').json()
+    old=next(e for e in all_data['events'] if e['id']==a);assert old['returned_after']==1
     new=next(e for e in data['events'] if e['id']==b);assert new['returned_after']==0
     assert old['conversion'] is None and new['conversion'] is None
 
@@ -133,3 +135,69 @@ def test_21_weak_same_source_registration_presence_no_new_people(client):
     second=upload(client,e,text,'confirmed');assert second['updated']==2 and second['imported']==0
     assert len(client.get('/api/people').json())==2
     assert client.get('/api/dashboard').json()['attendance']==2
+
+
+def test_5_6_7_compound_aliases_require_review_and_keep_sources(client):
+    e=event(client)
+    for a,b,email in [('Iside Oliveti','Iside Oliveti Oliveti','iside@test.it'),('Francesco Son','Francesco Sonnessa','francesco@test.it'),('Rebecca Lai','Rebecca Lai Musa','rebecca@test.it')]:
+        result=upload(client,e,f'Nome completo,Email\n{a},{email}\n{b},{email}\n')
+        assert result['automatic']==0
+    matches=client.get('/api/v2/identity').json();assert len(matches)==3
+    assert all(m['can_merge'] for m in matches)
+    pair=next(m for m in matches if 'Iside' in m['a']['name'])
+    preview=client.post('/api/matches/preview',json={'a':pair['a']['id'],'b':pair['b']['id']}).json()
+    assert preview['recommended']['display_name']=='Iside Oliveti'
+
+
+def test_19_order_shared_never_identity_registration_key_preserves_weak(client):
+    e=event(client)
+    first=upload(client,e,'Nome,Email,ID ordine,ID registrazione\nMario,,ORD-1,TICKET-A\nLuca,,ORD-1,TICKET-B\n')
+    assert first['imported']==2
+    second=upload(client,e,'Nome,Email,ID ordine,ID registrazione\nMario,,ORD-1,TICKET-A\nLuca,,ORD-1,TICKET-B\n','confirmed')
+    assert second['updated']==2 and len(client.get('/api/people').json())==2
+    assert client.get('/api/dashboard').json()['attendance']==2
+
+
+def test_25_absent_cancelled_never_enter_ranking_and_bulk_undo_guard(client):
+    e=event(client)
+    upload(client,e,'Nome completo,Email\nMario Rossi,mario@test.it\n','absent')
+    assert client.get('/api/v2/people?ranked=true').json()['total']==0
+    a=client.post('/api/v2/bulk/preview',json={'event_id':e,'status':'confirmed'}).json()['token'];client.post('/api/v2/bulk/'+a+'/confirm')
+    b=client.post('/api/v2/bulk/preview',json={'event_id':e,'status':'cancelled'}).json()['token'];client.post('/api/v2/bulk/'+b+'/confirm')
+    assert client.post('/api/v2/bulk/'+a+'/undo').status_code==409
+    assert client.get('/api/v2/people?ranked=true').json()['total']==0
+
+
+def test_views_templates_defer_and_duplicate_event_warning(client):
+    e=event(client,'Bottini Milano','2026-10-01')
+    possible=client.get('/api/v2/events/similar?name=Bottini%20Milano!&day=2026-10-01').json();assert possible[0]['id']==e
+    assert client.get('/api/v2/events/similar?name=Bottini%20Milano&day=2026-10-02').json()==[]
+    assert client.post('/api/v2/views',json={'name':'Ricorrenti','filters':{'min_visits':2}}).status_code==200
+    assert client.get('/api/v2/views').json()[0]['name']=='Ricorrenti'
+    assert client.post('/api/v2/mapping-templates',json={'name':'Mio formato','headers':['Nome'],'mapping':{'first':0}}).status_code==200
+    assert client.get('/api/v2/mapping-templates').json()[0]['name']=='Mio formato'
+    upload(client,e,'Nome completo,Email\nMario Rossi,a@test.it\nMario Rosssi,a@test.it\n')
+    client.post('/api/v2/identity/defer',json={'a':1,'b':2})
+    assert client.get('/api/v2/identity').json()==[]
+    assert len(client.get('/api/v2/identity?deferred=true').json())==1
+    client.post('/api/v2/identity/resume',json={'a':1,'b':2})
+    assert len(client.get('/api/v2/identity').json())==1
+
+
+def test_35_complete_registration_conversion_requires_known_outcomes(client):
+    e=event(client)
+    upload(client,e,'Nome completo,Email\nMario Rossi,m@test.it\nLuca Rossi,l@test.it\n')
+    client.put('/api/events/'+str(e),json={'name':'Completo','date':'2026-01-01','registration_complete':True})
+    assert client.get('/api/v2/analytics').json()['events'][0]['conversion'] is None
+    a=client.post('/api/v2/bulk/preview',json={'event_id':e,'status':'confirmed','ids':[1]}).json();client.post('/api/v2/bulk/'+a['token']+'/confirm')
+    b=client.post('/api/v2/bulk/preview',json={'event_id':e,'status':'absent','ids':[2]}).json();client.post('/api/v2/bulk/'+b['token']+'/confirm')
+    assert client.get('/api/v2/analytics').json()['events'][0]['conversion']==.5
+
+
+def test_pattern_email_and_structured_double_given_name_no_false_merge(client):
+    e=event(client)
+    result=upload(client,e,'Nome,Cognome,Contatto sconosciuto\nMaria Anna,De Luca,maria.anna@test.it\nMaria Sara,De Luca,sara@test.it\n')
+    assert result['valid_rows']==2
+    people=client.get('/api/people').json();assert {p['first_name'] for p in people}=={'Maria Anna','Maria Sara'}
+    assert {p['email'] for p in people}=={'maria.anna@test.it','sara@test.it'}
+    assert client.get('/api/matches').json()==[]
