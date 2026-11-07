@@ -46,11 +46,12 @@ def register(app,db,get_db_path,lock):
         try:f=Filters(**json.loads(filters))
         except Exception:raise HTTPException(422,'Filtri non validi')
         with db() as c:
-            selected=select_people(people_report(c),f,q,sort,direction,ranked)
+            report=people_report(c)
+            selected=select_people(report,f,q,sort,direction,ranked)
             total=len(selected)
             if ranked:selected=selected[:50]
             size=min(200,max(1,page_size));offset=(max(1,page)-1)*size
-            return {'total':total,'selected':len(selected),'rows':[public_person(p) for p in selected[offset:offset+size]],'top3':[public_person(p) for p in selected[:3]],'page':max(1,page),'page_size':size}
+            return {'available':len(report[0]),'total':total,'selected':len(selected),'rows':[public_person(p) for p in selected[offset:offset+size]],'top3':[public_person(p) for p in selected[:3]],'page':max(1,page),'page_size':size}
 
     @app.get('/api/v2/events/similar')
     def similar_events(name:str,day:str):
@@ -117,16 +118,9 @@ def register(app,db,get_db_path,lock):
         with db() as c:return analytics(c,f,min(365,max(1,window)))
 
     @app.get('/api/v2/quality')
-    def quality(kind:str=''):
-        with db() as c:
-            report=people_report(c,True);ps=report[0]
-            categories={'incomplete':[public_person(p) for p in ps if p['incomplete']],'no_email':[public_person(p) for p in ps if not p['email']],'no_contacts':[public_person(p) for p in ps if not p['email'] and not p['phone']],
-                'unassigned':[dict(r) for r in c.execute('SELECT * FROM import_issues WHERE resolved=0')],
-                'duplicates':[dict(r) for r in c.execute('SELECT import_id,person_id,COUNT(*) count FROM import_rows GROUP BY import_id,person_id HAVING COUNT(*)>1')],
-                'undefined_values':[dict(r) for r in c.execute('SELECT * FROM events WHERE participant_value_cents IS NULL')],
-                'import_errors':[dict(r) for r in c.execute('SELECT * FROM import_issues WHERE resolved=0')],
-                'ambiguous':candidates(c,limit=None),'conflicts':[public_person(p) for p in ps if p['conflicts']]}
-            return {'counts':{k:len(v) for k,v in categories.items()},'rows':categories.get(kind,[]),'kind':kind}
+    def quality(kind:str='incomplete',q:str='',page:int=1,page_size:int=50):
+        from .quality import quality_page
+        with db() as c:return quality_page(c,kind,q,page,page_size)
 
     @app.post('/api/v2/issues/{issue_id}/resolve')
     def resolve_issue(issue_id:int,person_id:int,amount_cents:int|None=None):
@@ -164,7 +158,7 @@ def register(app,db,get_db_path,lock):
         with db(True) as c:return {'id':c.execute('INSERT INTO mapping_templates(name,headers,mapping,header_row) VALUES(?,?,?,?)',(str(body.get('name','Formato salvato'))[:100],json.dumps(body.get('headers',[])),json.dumps(mapping),int(body.get('header_row',1)))).lastrowid}
 
     @app.get('/api/v2/identity')
-    def review(deferred:bool=False,page:int=1,page_size:int=25):
+    def review(deferred:bool=False,page:int=1,page_size:int=25,queue:str='all'):
         from .profiles import canonical_profiles
         from .participations import load_evidence,consolidate
         with db() as c:
@@ -172,7 +166,11 @@ def register(app,db,get_db_path,lock):
             report=people_report(c,True);reports={p['id']:p for p in report[0]}
             evidence=load_evidence(c);overrides=[dict(r) for r in c.execute('SELECT * FROM participation_overrides WHERE active=1 ORDER BY id')]
             all_rows=candidates(c,deferred=deferred,limit=None)
-            size=min(100,max(1,page_size));rows=all_rows[(max(1,page)-1)*size:max(1,page)*size]
+            size=min(100,max(1,page_size))
+            if queue in ('ready','conflicts'):
+                from .review import diagnose
+                all_rows=[r for r in all_rows if diagnose(c,r['a']['id'],r['b']['id'],details=False)['can_merge']==(queue=='ready')]
+            rows=all_rows[(max(1,page)-1)*size:max(1,page)*size]
             for row in rows:
                 a,b=row['a']['id'],row['b']['id'];ga,gb=membership[a],membership[b]
                 row['original_a']=row['a'];row['original_b']=row['b'];row['a']={**ps[ga],**profiles[ga]};row['b']={**ps[gb],**profiles[gb]}
@@ -191,6 +189,16 @@ def register(app,db,get_db_path,lock):
                     if state=='confirmed':combined_visits+=1;combined_value+=report[1][eid]['participant_value_cents'] or 0
                 row['impact']={'presences_change':combined_visits-reports[ga]['visits']-reports[gb]['visits'],'value_change':combined_value-reports[ga]['value']-reports[gb]['value'],'people_change':-1,'overlapping_events':len(overlaps),'message':'Le presenze sullo stesso evento saranno consolidate una sola volta; eventuali stati contrari diventeranno conflitti.'}
             return {'rows':rows,'total':len(all_rows),'page':max(1,page),'page_size':size}
+
+    @app.get('/api/v2/identity/resolve')
+    def resolve(a:int,b:int):
+        from .review import diagnose
+        with db() as c:return diagnose(c,a,b)
+
+    @app.get('/api/v2/identity/links/{link_id}/preview-undo')
+    def preview_undo(link_id:int):
+        from .review import undo_preview
+        with db() as c:return undo_preview(c,link_id)
 
     @app.post('/api/v2/identity/defer')
     def defer(body:Pair):
@@ -222,7 +230,8 @@ def register(app,db,get_db_path,lock):
     @app.get('/api/v2/backups')
     def backups():
         folder=Path(get_db_path()).parent/'backups'
-        return [{'name':p.name,'bytes':p.stat().st_size} for p in sorted(folder.glob('*.db'),reverse=True)]
+        from .backup_info import describe_backup
+        return [describe_backup(p) for p in sorted(folder.glob('*.db'),reverse=True) if not p.is_symlink()]
 
     @app.get('/api/v2/backups/{name}')
     def download_backup(name:str):
@@ -247,8 +256,11 @@ def register(app,db,get_db_path,lock):
         except Exception:
             shutil.rmtree(folder);raise HTTPException(400,'Backup non valido o incompatibile. Il database corrente non è stato modificato.')
         token=secrets.token_urlsafe(20);sha=hashlib.sha256(path.read_bytes()).hexdigest()
-        with db(True) as c:c.execute('INSERT INTO restore_drafts VALUES(?,?,?,?)',(token,str(path),sha,int(time.time())))
-        return {'token':token,'counts':counts,'message':'Copia temporanea verificata. Confermare sostituirà il database corrente dopo averlo salvato.'}
+        with db(True) as c:
+            from .backup_info import database_counts
+            current_counts=database_counts(c)
+            c.execute('INSERT INTO restore_drafts VALUES(?,?,?,?)',(token,str(path),sha,int(time.time())))
+        return {'token':token,'counts':counts,'current_counts':current_counts,'schema_version':4,'message':'Copia temporanea verificata. Confermare sostituirà il database corrente dopo averlo salvato.'}
 
     @app.post('/api/v2/restore/{token}/confirm')
     def restore_confirm(token:str):

@@ -1,6 +1,6 @@
 {
   "name": "evently",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,9 @@
     "test:sorting": "node e2e/sorting.cjs",
     "test:performance": "node e2e/performance.cjs",
     "test:profiles": "node e2e/profiles-export.cjs",
-    "test:charts": "node e2e/attendance-chart.cjs"
+    "test:charts": "node e2e/attendance-chart.cjs",
+    "test:v21": "node e2e/v21.cjs",
+    "test:contrast": "node e2e/contrast.cjs"
   },
   "dependencies": {
     "lucide-react": "0.468.0",

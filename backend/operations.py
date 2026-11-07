@@ -65,10 +65,10 @@ def analytics(c,filters=None,window=90,reference=None):
     for i,a in enumerate(event_rows):
         for b in event_rows[i+1:]:
             shared=sum(a['id'] in ids and b['id'] in ids for ids in confirmed.values())
-            if shared:affinity.append({'a':a['name'],'b':b['name'],'shared':shared,'category_a':a['category'],'category_b':b['category']})
+            if shared:affinity.append({'a_id':a['id'],'b_id':b['id'],'a':a['name'],'b':b['name'],'shared':shared,'category_a':a['category'],'category_b':b['category']})
     f=filters or {}
     event_rows=[e for e in event_rows if (not f.get('event_id') or e['id']==f['event_id']) and (not f.get('category') or e['category']==f['category']) and (not f.get('start') or e['date']>=f['start']) and (not f.get('end') or e['date']<=f['end'])]
-    shown={e['name'] for e in event_rows};affinity=[a for a in affinity if a['a'] in shown or a['b'] in shown]
+    shown={e['id'] for e in event_rows};affinity=[a for a in affinity if a['a_id'] in shown and a['b_id'] in shown];affinity.sort(key=lambda a:(-a['shared'],a['a_id'],a['b_id']))
     categories={}
     for eid,e in events.items():
         if e['category']:
@@ -77,7 +77,10 @@ def analytics(c,filters=None,window=90,reference=None):
     category_affinity.sort(key=lambda row:(-row['shared'],row['a'],row['b']))
     scoped_events=[(events[eid],v) for p in chosen for eid,v in p['event_data'].items() if v['confirmed']]
     first_date=f.get('start','')
-    return {'people':len(chosen),'with_presence':sum(p['visits']>0 for p in chosen),'new':sum(p['visits']>0 and (not first_date or p['first_seen_global']>=first_date) for p in chosen),'returning':sum(p['visits']>0 and bool(first_date) and p['first_seen_global']<first_date for p in chosen),
+    segment_new=[p for p in chosen if p['visits']>0 and p['first_seen']==p['first_seen_global']]
+    segment_returning=[p for p in chosen if p['visits']>0 and p['first_seen_global']<p['first_seen']]
+    scoped=bool(f.get('start') or f.get('end') or f.get('category') or f.get('event_id'))
+    return {'people':len(chosen),'with_presence':sum(p['visits']>0 for p in chosen),'new':len(segment_new) if scoped else None,'returning':len(segment_returning) if scoped else None,'period_defined':scoped,'historical_returning':sum(p['visits']>=2 for p in people),'historical_people':len(people),'historical_with_presence':sum(p['visits']>0 for p in people),
             'free_presences':sum(e['participant_value_cents']==0 for e,v in scoped_events),'paid_presences':sum(e['participant_value_cents'] is not None and e['participant_value_cents']>0 for e,v in scoped_events),'undefined_presences':sum(e['participant_value_cents'] is None for e,v in scoped_events),'attributed_value':sum(p['value'] for p in chosen),'first_presence':min((e['date'] for e,v in scoped_events),default=None),'last_presence':max((e['date'] for e,v in scoped_events),default=None),'category_affinity':category_affinity,
             'frequencies':{str(n):sum(p['visits']>=n for p in chosen) for n in (2,3,5,10)},'events':event_rows,'affinity':affinity,'coverage':'Solo lo storico importato è conosciuto; nessuna assenza è dedotta dai dati mancanti.',
-            'inactive':{str(days):sum(p['last_seen'] is not None and p['last_seen']<=(today-timedelta(days=days)).isoformat() for p in people) for days in (30,90,180,365)}}
+            'inactive':{str(days):sum(p['last_seen_global'] is not None and p['last_seen_global']<=(today-timedelta(days=days)).isoformat() for p in select_people(report,{**f,'inactive_days':days})) for days in (30,90,180,365)}}

@@ -1,0 +1,39 @@
+{
+  "method": "Real TestClient API, two first requests per synthetic archive; no browser/network delay. Unique weak names, no identity candidates. Wall-clock, single run, not p95.",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "results": [
+    {
+      "synthetic_cases": 200,
+      "page": 1,
+      "page_size": 50,
+      "returned_rows": 50,
+      "response_bytes": 24066,
+      "seconds": 0.017897
+    },
+    {
+      "synthetic_cases": 200,
+      "page": 2,
+      "page_size": 50,
+      "returned_rows": 50,
+      "response_bytes": 24086,
+      "seconds": 0.011468
+    },
+    {
+      "synthetic_cases": 10000,
+      "page": 1,
+      "page_size": 50,
+      "returned_rows": 50,
+      "response_bytes": 24076,
+      "seconds": 0.279256
+    },
+    {
+      "synthetic_cases": 10000,
+      "page": 2,
+      "page_size": 50,
+      "returned_rows": 50,
+      "response_bytes": 24096,
+      "seconds": 0.212405
+    }
+  ]
+}

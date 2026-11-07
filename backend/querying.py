@@ -9,6 +9,7 @@ class Filters(BaseModel):
     category:str=''
     start:str=''
     end:str=''
+    global_min_visits:int=Field(default=0,ge=0)
     min_visits:int=Field(default=0,ge=0)
     max_visits:int|None=Field(default=None,ge=0)
     min_value:int=Field(default=0,ge=0)
@@ -39,8 +40,8 @@ def select_people(report,filters=None,q='',sort='visits',direction='desc',ranked
     selected=[]
     scoped=bool(f.event_id or f.category or f.start or f.end or f.pricing)
     for original in people:
-        if not matches_filter(original,q):continue
-        p={**original};p['first_seen_global']=p['first_seen']
+        if not matches_filter(original,q) or original['visits']<f.global_min_visits:continue
+        p={**original};p['first_seen_global']=p['first_seen'];p['last_seen_global']=p['last_seen']
         visits={eid:v for eid,v in p['event_data'].items() if (not f.event_id or eid==f.event_id) and (not f.category or events[eid]['category']==f.category) and (not f.start or events[eid]['date']>=f.start) and (not f.end or events[eid]['date']<=f.end) and (not f.pricing or (f.pricing=='free' and events[eid]['participant_value_cents']==0) or (f.pricing=='paid' and events[eid]['participant_value_cents'] is not None and events[eid]['participant_value_cents']>0) or (f.pricing=='undefined' and events[eid]['participant_value_cents'] is None))}
         if scoped and not visits:continue
         confirmed=[eid for eid,v in visits.items() if v['confirmed']]

@@ -21,7 +21,7 @@ from .reporting import people_report, events_report, public_person, matches_filt
 from .profiles import canonical_profiles,save_profile,recommend
 from .exporting import export_file
 
-app = FastAPI(title='EVENTLY', version='2.0.1')
+app = FastAPI(title='EVENTLY', version='2.1.0')
 @app.exception_handler(sqlite3.Error)
 async def storage_error(request,error):
     return JSONResponse(status_code=500,content={'detail':'Operazione non completata. I dati sono stati conservati: riprova o controlla il backup.'})
@@ -104,7 +104,7 @@ def active_event(c,eid):
 def health():
     with db() as c:
         version=c.execute('PRAGMA user_version').fetchone()[0]
-    return {'status':'ok','schema_version':version,'version':'2.0.1'}
+    return {'status':'ok','schema_version':version,'version':'2.1.0'}
 
 
 @app.post('/api/backup')
@@ -286,8 +286,10 @@ def decide(d:Decision):
 
 
 @app.post('/api/identity/links/{link_id}/undo')
-def undo_merge(link_id:int):
+def undo_merge(link_id:int,expected_snapshot:str=''):
+    from .importing import snapshot
     with db(True) as c:
+        if expected_snapshot and snapshot(c)!=expected_snapshot:raise HTTPException(409,'I dati sono cambiati: rigenera l’anteprima')
         row=c.execute('SELECT * FROM identity_links WHERE id=? AND active=1',(link_id,)).fetchone()
         if not row:
             raise HTTPException(404,'Unione attiva non trovata')

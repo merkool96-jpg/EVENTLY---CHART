@@ -19,6 +19,7 @@ import {
   Trash2,
 } from "lucide-react";
 import "./style.css";
+import { EventsPage } from "./EventsPage";
 import { ParticipantsChart } from "./ParticipantsChart";
 import { ImportWizard } from "./ImportWizard";
 import { MergeDialog, EditPersonDialog, ExportDialog } from "./PersonDialogs";
@@ -164,6 +165,7 @@ function App() {
     [target, setTarget] = useState(""),
     [history, setHistory] = useState<History[]>([]),
     [imports, setImports] = useState<ImportEntry[]>([]);
+  const [peoplePreset,setPeoplePreset]=useState<any>(null);
   const dataRequest = useRef(0);
   const reviewRequest = useRef(0);
   async function refresh(scope: "all" | "review" = "all") {
@@ -189,7 +191,7 @@ function App() {
         });
     };
     const tasks = [
-      
+
       load("/identity/history", setHistory, "review"),
     ];
     if (scope === "all")
@@ -285,10 +287,10 @@ function App() {
     { icon: CalendarDays, label: "Eventi" },
     {icon:Upload,label:"Importazioni"},
     { icon: Users, label: "Partecipanti" },
-    { icon: Trophy, label: "Top 50" },
     { icon: GitMerge, label: "Identità" },
-    {icon:Sparkles,label:"Community Analytics"},
     {icon:Check,label:"Qualità Dati"},
+    { icon: Trophy, label: "Top 50" },
+    {icon:Sparkles,label:"Community Analytics"},
     {icon:Users,label:"Impostazioni"},
   ];
   return (
@@ -303,13 +305,14 @@ function App() {
         <div className="workspace">
           <span className="avatar">S</span>
           <div>
-            Il mio workspace<small>Piano locale · Gratuito</small>
+            Il mio workspace<small>Locale · Gratuito</small>
           </div>
           <ChevronRight size={14} />
         </div>
-        <p className="nav-label">WORKSPACE</p>
+
         <nav>
           {nav.map(({ icon: I, label }) => (
+            <React.Fragment key={label}>{({Dashboard:'Operatività',Partecipanti:'Persone','Top 50':'Analisi',Impostazioni:'Impostazioni'} as any)[label]&&<p className="nav-label">{({Dashboard:'Operatività',Partecipanti:'Persone','Top 50':'Analisi',Impostazioni:'Impostazioni'} as any)[label]}</p>}
             <button
               aria-label={label}
               key={label}
@@ -325,6 +328,7 @@ function App() {
                 <b>{matches.length}</b>
               )}
             </button>
+            </React.Fragment>
           ))}
         </nav>
         <div className="local-card">
@@ -423,13 +427,13 @@ function App() {
                     label: "Partecipanti unici",
                     value: stats.people,
                     icon: Users,
-                    detail: "Persone nel tuo network",
+                    detail: "Profili unificati, non righe importate",
                   },
                   {
-                    label: "Eventi realizzati",
+                    label: "Eventi inclusi nelle analisi",
                     value: stats.events,
                     icon: CalendarDays,
-                    detail: "Connessioni che prendono forma",
+                    detail: "Comprende lo storico archiviato incluso",
                   },
                   {
                     label: "Valore attribuito",
@@ -444,7 +448,7 @@ function App() {
                     detail: `${stats.registrations} registrazioni · ${stats.unknown} da verificare`,
                   },
                 ].map(({ label, value, icon: I, detail }) => (
-                  <section className="metric" key={label}>
+                  <section className="metric" key={label} title={label==='Partecipanti unici'?'Gruppi di identità dopo le unioni, incluse persone senza presenza.':label==='Valore attribuito'?'Somma del valore convenzionale degli eventi per le presenze confermate. Non sono incassi; valori mancanti indicano un subtotale.':label==='Presenze confermate'?'Una presenza per persona unificata per evento incluso. Iscrizioni, assenze e stati in conflitto non aumentano questo totale.':'Eventi con inclusione nelle analisi attiva, anche archiviati; non include quelli esplicitamente esclusi.'}>
                     <div>
                       {label}
                       <I size={17} />
@@ -455,7 +459,7 @@ function App() {
                 ))}
               </div>
               <div className="dashboard-grid">
-                <ParticipantsChart events={stats.timeline} actualSpend={stats.actual_spend}/>
+                <ParticipantsChart events={stats.timeline} actualSpend={stats.actual_spend} onEvent={setWorkspace}/>
                 <section className="panel spotlight">
                   <span className="tag">PERSONE CHE FANNO LA DIFFERENZA</span>
                   <Trophy size={31} />
@@ -469,15 +473,16 @@ function App() {
                     confermata, senza usare gli importi.
                   </p>
                   {people[0]?.visits > 0 && (
-                    <div className="spot-person">
+                    <button className="spot-person" onClick={()=>showProfile(people[0])} aria-label={'Apri profilo '+people[0].name}>
                       <span className="avatar">{initials(people[0].name)}</span>
                       <div>
                         <strong>{people[0].name}</strong>
                         <small>
-                          {people[0].visits} eventi · {euro(people[0].value)}
+                          {people[0].visits} presenze · {euro(people[0].value)}
+                          <span>Ultima presenza: {day(people[0].last_seen||'')}</span>
                         </small>
                       </div>
-                    </div>
+                    </button>
                   )}
                   <button onClick={() => setPage("Top 50")}>
                     Esplora la Top 50 <ArrowUpRight size={17} />
@@ -529,64 +534,13 @@ function App() {
               )}
             </>
           )}
-          {page === "Eventi" && (
-            <>
-              <div className="toolbar">
-                <span>{events.length} eventi nello storico <button className="text-button" onClick={()=>setShowArchived(!showArchived)}>{showArchived?"Mostra operativi":"Mostra archivio"}</button></span>
-                <button className="primary" onClick={() => openEvent()}>
-                  <Plus size={16} /> Nuovo evento
-                </button>
-              </div>
-              <div className="event-grid">
-                {events.filter(e=>showArchived?e.archived:!e.archived).map((e, i) => (
-                  <div key={e.id}>
-                    <EventCard
-                      event={e}
-                      index={i}
-                      onEdit={() => setWorkspace(e.id)}
-                    />
-                    <div className="event-actions">
-                      <button
-                        onClick={() => {
-                          setTarget(String(e.id));
-                          setModal("import");
-                        }}
-                      >
-                        <Upload size={14} /> Importa
-                      </button>
-                      <button onClick={() => openEvent(e)}>
-                        <Pencil size={14} /> Modifica
-                      </button>
-                      <button
-                        aria-label={"Elimina " + e.name}
-                        onClick={() => {
-                          if (
-                            confirm(
-                              "Archiviare questo evento? I dati originali saranno conservati.",
-                            )
-                          )
-                            void act(
-                              () =>
-                                api("/events/" + e.id, { method: "DELETE" }),
-                              "Evento archiviato",
-                            );
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {!events.length && <Empty text="Crea un evento per iniziare." />}
-            </>
-          )}
-          {(page==='Partecipanti'||page==='Top 50')&&<PeoplePage key={page+panelVersion} ranked={page==='Top 50'} onOpen={showProfile}/>}
+          {page==='Eventi'&&<EventsPage events={events} onOpen={setWorkspace} onEdit={openEvent} onCreate={()=>openEvent()} onImport={id=>{setTarget(String(id));setModal('import')}} onArchive={e=>{void act(()=>api('/v2/events/'+e.id+'/archive',json({archived:!e.archived})),e.archived?'Evento ripristinato':'Evento archiviato')}}/>}
+          {(page==='Partecipanti'||page==='Top 50')&&<PeoplePage key={page+panelVersion} ranked={page==='Top 50'} onOpen={showProfile} preset={peoplePreset}/>}
           {page==='Importazioni'&&<ImportHistory/>}
-          {page==='Community Analytics'&&<AnalyticsPage/>}
+          {page==='Community Analytics'&&<AnalyticsPage onEvent={setWorkspace} onSegment={filters=>{setPeoplePreset(filters);setPanelVersion(v=>v+1);setPage('Partecipanti')}}/>}
           {page==='Qualità Dati'&&<QualityPage onOpen={showProfile} onEvent={setWorkspace} onChange={()=>{void refresh()}}/>}
           {page==='Impostazioni'&&<SettingsPage/>}
-          {page==='Identità'&&<><ReviewPage key={panelVersion} onMerge={(a,b)=>setMergeTarget({a,b})} onOpen={showProfile} onChange={()=>{void refresh('review')}}/><section className="panel history-panel"><h3>Storico decisioni</h3>{history.slice(0,100).map(h=><div className="history-row" key={h.id}><div><strong>{h.action} · #{h.a}{h.b?' / #'+h.b:''}</strong><small>{h.reason} · {h.created_at} UTC</small></div>{h.action==='merge'&&h.active===1&&<button disabled={busy} onClick={()=>act(()=>api('/identity/links/'+h.link_id+'/undo',{method:'POST'}),'Unione annullata').then(()=>setPanelVersion(v=>v+1))}>Annulla unione</button>}</div>)}</section></>}
+          {page==='Identità'&&<><ReviewPage key={panelVersion} onMerge={(a,b)=>setMergeTarget({a,b})} onOpen={showProfile} onChange={(aggregates=false)=>{void refresh(aggregates?'all':'review')}}/><section className="panel history-panel"><h3>Storico decisioni</h3>{history.slice(0,100).map(h=><div className="history-row" key={h.id}><div><strong>{h.action} · #{h.a}{h.b?' / #'+h.b:''}</strong><small>{h.reason} · {h.created_at} UTC</small></div>{h.action==='merge'&&h.active===1&&<button disabled={busy} onClick={()=>act(()=>api('/identity/links/'+h.link_id+'/undo',{method:'POST'}),'Unione annullata').then(()=>setPanelVersion(v=>v+1))}>Annulla unione</button>}</div>)}</section></>}
           <footer>
             EVENTLY <span>Fatto per connettere. Progettato per durare.</span>
             <span>100% locale · Nessun servizio a pagamento</span>
@@ -909,7 +863,7 @@ function EventCard({
       </button>
       <div className="event-body">
         <span className="event-date">{day(e.date)}</span>
-        <h3>{e.name}</h3>
+
         <p>{e.location || "Luogo da definire"}</p>
         <div>
           <span>

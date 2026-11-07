@@ -22,3 +22,5 @@ Base locale verificata: feat/evently-v2, f08e73e, software2.0.1/schema4. Il fetc
 - Backup: metadati disponibili verificati read-only, errori leggibili; preview su copia + confronto corrente; restore soltanto dopo conferma. Nessun cambio schema previsto, aggiornamento unico con backup esistente.
 
 Gli esiti verranno registrati in docs/RELEASE_REPORT_V21.md separando bug confermati, miglioramenti, aggiunte e limiti. Mac Finder/Safari/screen reader non vengono dichiarati verificati su Linux.
+
+Aggiornamento verifica remota prima della consegna: fetch riuscito usando il credential helper GitHub già configurato, senza salvare credenziali. origin/feat/evently-v2 è f08e73e, identico alla base. Nessun commit remoto escluso.

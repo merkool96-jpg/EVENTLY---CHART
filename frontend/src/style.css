@@ -234,7 +234,7 @@ header strong {
 .eyebrow {
   font-size: 8px !important;
   letter-spacing: 1.6px;
-  color: #8c9b8b !important;
+  color: #526353;
   font-weight: 600;
 }
 h1 {
@@ -1335,3 +1335,47 @@ nav button {
 .chart-mode-switch button:focus-visible{outline:2px solid #2f654b;outline-offset:3px}
 .attendance-panel{min-width:0}
 .attendance-panel .panel-heading{flex-wrap:wrap;gap:12px}
+/* V2.1: shared readable surfaces and interaction states, same visual identity. */
+:root{--text-muted:#526353;--surface:#fff;--green:#2f654b}
+small,.tag,.nav-label,.table-toolbar p,.chart-footer,.bar-column>span,.event-date,.hint,.spotlight>p,.local-card p,.workspace small,thead th{color:var(--text-muted)}
+.panel p,.metric small,.event-body small,.event-body p,.active-filters{color:var(--text-muted)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid #2f654b;outline-offset:3px}
+.event-cover{background:#38543b;color:#fff;height:110px}
+.event-cover.cover-1,.cover-1{background:#6b4c21;color:#fff}
+.event-cover.cover-2,.cover-2{background:#395762;color:#fff}
+.compact-event .event-cover{height:auto;min-height:100px;display:flex;align-items:start;justify-content:center;flex-direction:column;gap:10px;padding:18px}
+.compact-event .event-cover strong{font-size:20px;text-align:left}
+.compact-event .event-cover span{font-size:12px}
+.event-controls{display:flex;flex-wrap:wrap;align-items:end;gap:16px;margin-bottom:20px}
+.event-controls label{flex:1;min-width:150px}
+.event-actions{flex-wrap:wrap;padding:12px;gap:12px}
+.event-actions button{font-size:12px;color:#2f654b}
+.compact-event dl,.backup-card dl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+dt{font-size:12px;color:var(--text-muted)}dd{margin:4px 0;font-weight:650}
+.analytics-section{margin-top:24px}.analytics-section>h2{font-size:21px;margin-bottom:8px}
+.analytics-section>p{color:var(--text-muted);font-size:13px;line-height:1.6}
+.metric-bar{height:8px;background:#e7eee6;border-radius:4px;overflow:hidden;margin:8px 0}
+.metric-bar i{display:block;height:100%;background:#2f654b}
+.backup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:20px}
+.backup-card{border:1px solid #dce6dc;border-radius:10px;padding:16px;overflow-wrap:anywhere}
+.backup-card a{display:inline-block;margin-top:14px;color:#2f654b;text-decoration:underline}
+.chart-scale{display:flex;justify-content:space-between;flex-direction:column;position:absolute;height:180px;font-size:11px;color:var(--text-muted);padding:8px 0;pointer-events:none}
+.attendance-chart-scroll{position:relative;padding-left:50px}
+.chart-event-button{display:flex;flex-direction:column;justify-content:end;width:100%;gap:0;padding:0}
+.chart-event-button>span{font-size:11px;color:#2f654b;font-weight:650;margin-bottom:7px;white-space:nowrap}
+.reported-spend{margin-top:12px;padding:10px 12px;background:#f5f8f4;border-radius:6px;font-size:12px;color:var(--text-muted)}
+.reported-spend small{margin-top:4px}
+.active-filters{font-size:12px;padding:8px 0}
+.spotlight>.spot-person{text-align:left;justify-content:start}.spot-person span>span{display:block}
+.nav-label{font-size:11px;margin-top:20px;letter-spacing:1px}
+@media(max-width:700px){.backup-grid{grid-template-columns:1fr}.event-controls label{min-width:130px}.analytics-section h2{font-size:19px}.chart-mode-switch button{padding:8px;font-size:12px}.nav-label{display:none}.attendance-chart-scroll{padding-left:0}.chart-scale{position:static;height:auto;flex-direction:row}.metric{min-width:0}}
+
+label,.column-sort,.text-button,nav button,.history-row small,.export-toolbar>span,.empty p,.brand-dot{color:#526353}
+nav button.active,.column-sort.selected{color:#245c3a}
+.event-date,.chart-footer,.bar-column small{font-size:11px}
+input::placeholder{color:#627064;opacity:1}
+.table-wrap{max-width:100%}.panel{min-width:0}
+.shell>main>header,.eyebrow,td,.toolbar,.toolbar button,.toolbar strong,.event-body>div>span,footer,footer span{color:#526353}
+.toolbar .primary{color:#fff}
+.page-title .eyebrow{color:#526353}
+.rank-number{color:#526353}
