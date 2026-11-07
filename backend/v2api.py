@@ -252,7 +252,8 @@ def register(app,db,get_db_path,lock):
             migrate(path)
             with sqlite3.connect(path) as c:
                 if c.execute('PRAGMA foreign_key_check').fetchall():raise ValueError()
-                counts={table:c.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] for table in ('people','events','attendance','imports','decisions')}
+                from .backup_info import database_counts
+                counts=database_counts(c)
         except Exception:
             shutil.rmtree(folder);raise HTTPException(400,'Backup non valido o incompatibile. Il database corrente non è stato modificato.')
         token=secrets.token_urlsafe(20);sha=hashlib.sha256(path.read_bytes()).hexdigest()

@@ -1,6 +1,6 @@
 {
   "name": "evently",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,9 @@
     "test:profiles": "node e2e/profiles-export.cjs",
     "test:charts": "node e2e/attendance-chart.cjs",
     "test:v21": "node e2e/v21.cjs",
-    "test:contrast": "node e2e/contrast.cjs"
+    "test:contrast": "node e2e/contrast.cjs",
+    "test:v22": "node e2e/v22.cjs",
+    "test:v22-large": "node e2e/v22-large.cjs"
   },
   "dependencies": {
     "lucide-react": "0.468.0",

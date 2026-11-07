@@ -1,5 +1,6 @@
 """Explicit fields, private notes opt-in, full filtered selection, formula safe."""
 import csv,io
+from datetime import date
 from decimal import Decimal
 from fastapi import HTTPException
 from openpyxl import Workbook
@@ -22,6 +23,8 @@ def columns(body):
 def selection(c,body):
     selected=select_people(people_report(c),body.get('filters'),body.get('q',''))
     if body.get('ids') is not None:selected=[p for p in selected if p['id'] in set(body['ids'])]
+    if body.get('exclude_ids'):
+        excluded=set(body['exclude_ids']);selected=[p for p in selected if p['id'] not in excluded]
     return selected
 
 
@@ -39,13 +42,14 @@ def export(c,body):
             if key=='rewards':value='; '.join(f"{r['data']['name']} ({r['data']['status']}, {r['data']['date']})" for r in visible.get(p['id'],[]) if r['kind']=='reward')
             if key=='notes':value='\n'.join(r['data']['text'] for r in visible.get(p['id'],[]) if r['kind']=='note')
             if key=='value':value=Decimal(p['value'])/100
+            if key in ('first_seen','last_seen') and value:value=date.fromisoformat(value)
             if isinstance(value,str):value=safe_text(value)
             row.append(value)
         rows.append(row)
     headers=[label for key,label in chosen]
     if format=='csv':
         out=io.StringIO(newline='');writer=csv.writer(out,delimiter=';');writer.writerow(headers)
-        writer.writerows([str(v).replace('.',',') if isinstance(v,Decimal) else '' if v is None else v for v in row] for row in rows)
+        writer.writerows([str(v).replace('.',',') if isinstance(v,Decimal) else v.strftime('%d/%m/%Y') if isinstance(v,date) else '' if v is None else v for v in row] for row in rows)
         return ('\ufeff'+out.getvalue()).encode('utf-8'),'csv'
     book=Workbook();sheet=book.active;sheet.title='Lista strategica';sheet.append(headers)
     for row in rows:sheet.append(row)
@@ -53,6 +57,6 @@ def export(c,body):
     sheet.freeze_panes='A2';sheet.auto_filter.ref=sheet.dimensions
     for i,(key,label) in enumerate(chosen,1):
         sheet.column_dimensions[sheet.cell(1,i).column_letter].width=28
-        if key=='value':
-            for row in sheet.iter_rows(min_row=2):row[i-1].number_format='#,##0.00 "€"'
+        if key in ('value','first_seen','last_seen'):
+            for row in sheet.iter_rows(min_row=2):row[i-1].number_format='#,##0.00 "€"' if key=='value' else 'dd/mm/yyyy'
     out=io.BytesIO();book.save(out);return out.getvalue(),'xlsx'

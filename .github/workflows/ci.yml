@@ -21,6 +21,8 @@ jobs:
         run: EVENTLY_DB="$RUNNER_TEMP/evently-upgrade-control.db" python -m scripts.verify_v2_update
       - name: Rehearse V2.0.1 to V2.1 on synthetic data
         run: EVENTLY_DB="$RUNNER_TEMP/evently-v21-upgrade-control.db" python -m scripts.verify_v2_update --base f08e73e
+      - name: Rehearse V2.1 to V2.2 on synthetic data
+        run: EVENTLY_DB="$RUNNER_TEMP/evently-v22-upgrade-control.db" python -m scripts.verify_v2_update --base v2.1.0
       - run: npm ci && npm run build && npm audit --audit-level=high
         working-directory: frontend
       - name: Install Chromium for UI smoke test
@@ -61,3 +63,23 @@ jobs:
           done
           EVENTLY_URL=http://127.0.0.1:8004 npm run test:v21 --prefix frontend
           EVENTLY_URL=http://127.0.0.1:8004 npm run test:contrast --prefix frontend
+          EVENTLY_DB="$RUNNER_TEMP/evently-v22.db" python -m uvicorn backend.app:app --host 127.0.0.1 --port 8005 > "$RUNNER_TEMP/evently-v22.log" 2>&1 &
+          v22_pid=$!
+          trap 'kill "$api_pid" "$profiles_pid" "$v21_pid" "$v22_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8005/api/health > /dev/null; then break; fi
+            kill -0 "$v22_pid"
+            sleep 1
+          done
+          EVENTLY_URL=http://127.0.0.1:8005 npm run test:v22 --prefix frontend
+          EVENTLY_URL=http://127.0.0.1:8005 npm run test:contrast --prefix frontend
+          EVENTLY_DB="$RUNNER_TEMP/evently-v22-large.db" python -m backend.tests.seed_large_community
+          EVENTLY_DB="$RUNNER_TEMP/evently-v22-large.db" python -m uvicorn backend.app:app --host 127.0.0.1 --port 8006 > "$RUNNER_TEMP/evently-v22-large.log" 2>&1 &
+          large_pid=$!
+          trap 'kill "$api_pid" "$profiles_pid" "$v21_pid" "$v22_pid" "$large_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8006/api/health > /dev/null; then break; fi
+            kill -0 "$large_pid"
+            sleep 1
+          done
+          EVENTLY_URL=http://127.0.0.1:8006 npm run test:v22-large --prefix frontend

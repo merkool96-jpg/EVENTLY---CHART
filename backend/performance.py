@@ -27,8 +27,14 @@ def event_performance(c,eid,asof=None,report=None):
         reason='Misurabile sullo storico disponibile' if measurable else 'Evento escluso dalle statistiche' if not event['include_analytics'] else 'Periodo di osservazione non ancora completo' if not mature else 'Nessuna occasione di ritorno nella finestra conosciuta' if not opportunities else 'Nessuna presenza idonea'
         windows.append({'days':days,'end':end,'eligible':len(attendees),'returned':len(returned),'returned_ids':returned,'opportunities':len(opportunities),'mature':mature,'rate':len(returned)/len(attendees) if measurable else None,'reason':reason})
     after={p['id'] for p in attendees if any(included[i]['date']>event['date'] for i in history[p['id']])}
+    expense_available=any(p['event_data'].get(eid,{}).get('amount',0)!=0 for p in people)
+    if not expense_available:
+        for row in c.execute('SELECT r.original,i.mapping FROM import_rows r JOIN imports i ON i.id=r.import_id WHERE i.event_id=?',(eid,)):
+            import json
+            column=json.loads(row['mapping']).get('amount');original=json.loads(row['original'])
+            if isinstance(column,int) and 0<=column<len(original) and original[column] not in ('',None):expense_available=True;break
     distribution={str(n):sum(len(history[p['id']])==n for p in attendees) for n in sorted({len(history[p['id']]) for p in attendees})}
-    return {'event':event,'presences':len(attendees),'new':len(new),'recurring':len(recurring),'recurring_rate':len(recurring)/len(attendees) if attendees else None,'returned_later':len(after),'windows':windows,'frequency_distribution':distribution,'attributed_value':event['attributed_value'],'cost':event['cost'],'reported_spend':event['actual_spend'],'verified_revenue':None,'asof':today.isoformat(),'generated_at':datetime.now(ZoneInfo('Europe/Rome')).isoformat(),'coverage':'Solo presenze confermate e date degli eventi inclusi caricati. Non conosciamo eventi esterni o copertura completa. Spesa riportata non è incasso verificato. Eventi nella stessa data non sono ordinati.'}
+    return {'event':event,'presences':len(attendees),'new':len(new),'recurring':len(recurring),'recurring_rate':len(recurring)/len(attendees) if attendees else None,'returned_later':len(after),'windows':windows,'frequency_distribution':distribution,'attributed_value':event['attributed_value'],'cost':event['cost'] if event.get('cost_defined') else None,'reported_spend':event['actual_spend'] if expense_available else None,'verified_revenue':None,'asof':today.isoformat(),'generated_at':datetime.now(ZoneInfo('Europe/Rome')).isoformat(),'coverage':'Solo presenze confermate e date degli eventi inclusi caricati. Non conosciamo eventi esterni o copertura completa. Spesa riportata non è incasso verificato; importi mancanti non sono zero documentato. Costi legacy pari a zero senza conferma sono non definiti. Eventi nella stessa data non sono ordinati.'}
 
 
 def compare(c,ids=None,category='',format_name='',asof=None):

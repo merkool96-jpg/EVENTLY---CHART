@@ -7,6 +7,9 @@ from pathlib import Path
 def database_counts(c):
     tables={r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     counts={t:c.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0] if t in tables else None for t in ('people','events','attendance','imports','decisions')}
+    for key,kind in [('crm_notes','note'),('crm_rewards','reward'),('crm_vips','vip')]:
+        counts[key]=c.execute('SELECT COUNT(*) FROM crm_records WHERE kind=?',(kind,)).fetchone()[0] if 'crm_records' in tables else None
+    for key,table in [('crm_tags','crm_tags'),('crm_segments','crm_segments')]:counts[key]=c.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] if table in tables else None
     return counts
 
 

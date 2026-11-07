@@ -138,6 +138,9 @@ def snapshot(c):
         h.update(table.encode())
         columns='id,fingerprint,event_id,filename,sheet,mapping,status,created_at' if table=='imports' else '*'
         h.update(json.dumps([tuple(r) for r in c.execute(f'SELECT {columns} FROM {table} ORDER BY rowid')],default=str).encode())
+    if c.execute("SELECT 1 FROM sqlite_master WHERE name='crm_records'").fetchone():
+        for table in ('crm_records','crm_tags','crm_campaigns','community_settings','crm_segments'):
+            h.update(table.encode());h.update(json.dumps([tuple(r) for r in c.execute(f'SELECT * FROM {table} ORDER BY rowid')],default=str).encode())
     return h.hexdigest()
 
 

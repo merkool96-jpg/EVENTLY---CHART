@@ -34,18 +34,20 @@ def register(app,db):
 
     @app.post('/api/v22/segments')
     def save_segment(body:dict):
-        name=str(body.get('name','')).strip()
+        name=str(body.get('name') or '').strip()
         if not name:raise HTTPException(422,'Indica il nome del segmento')
         f=Filters(**body.get('filters',{})).model_dump()
-        with db(True) as c:return {'id':c.execute('INSERT INTO crm_segments(name,filters) VALUES(?,?)',(name[:120],crm.dumps(f))).lastrowid}
+        with db(True) as c:
+            sid=c.execute('INSERT INTO crm_segments(name,filters) VALUES(?,?)',(name[:120],crm.dumps(f))).lastrowid
+            crm.log(c,'segment_definition',None,None,reason=crm.dumps({'id':sid,'name':name[:120],'filters':f}));return {'id':sid}
 
     @app.get('/api/v22/tags')
     def tags():
         with db() as c:return [dict(r) for r in c.execute('SELECT * FROM crm_tags ORDER BY archived,name')]
 
     def tag_values(body):
-        name=str(body.get('name','')).strip();normalized=crm.normalized(name);color=body.get('color','#2f654b')
-        if not normalized or len(name)>100 or normalized=='vip':raise HTTPException(422,'Nome tag mancante, troppo lungo o riservato (VIP)')
+        name=str(body.get('name') or '').strip();normalized=crm.normalized(name);color=body.get('color','#2f654b')
+        if not normalized or len(name)>100 or normalized.replace(' ','')=='vip':raise HTTPException(422,'Nome tag mancante, troppo lungo o riservato (VIP)')
         if not re.fullmatch(r'#[0-9a-fA-F]{6}',color):raise HTTPException(422,'Colore non valido')
         return name,normalized,color,str(body.get('description',''))[:1000],int(bool(body.get('archived',False)))
 
@@ -72,11 +74,12 @@ def register(app,db):
 
     @app.post('/api/v22/campaigns')
     def create_campaign(body:dict):
-        name=str(body.get('name','')).strip();key=crm.normalized(name)
+        name=str(body.get('name') or '').strip();key=crm.normalized(name)
         if not key:raise HTTPException(422,'Indica il nome dell’iniziativa')
         with db(True) as c:
             if c.execute('SELECT 1 FROM crm_campaigns WHERE normalized=?',(key,)).fetchone():raise HTTPException(409,'Iniziativa già presente')
-            return {'id':c.execute('INSERT INTO crm_campaigns(name,normalized) VALUES(?,?)',(name[:120],key)).lastrowid}
+            cid=c.execute('INSERT INTO crm_campaigns(name,normalized) VALUES(?,?)',(name[:120],key)).lastrowid
+            crm.log(c,'campaign_definition',None,None,reason=crm.dumps({'id':cid,'name':name[:120]}));return {'id':cid}
 
     @app.post('/api/v22/bulk/preview')
     def crm_preview(body:dict):
@@ -91,8 +94,8 @@ def register(app,db):
         with db(True) as c:return crm.undo(c,token)
 
     @app.get('/api/v22/people/{pid}')
-    def crm_profile(pid:int):
-        with db() as c:return crm.profile(c,pid)
+    def crm_profile(pid:int,history_page:int=1):
+        with db() as c:return crm.profile(c,pid,history_page)
 
     @app.post('/api/v22/people/{pid}/notes')
     def create_note(pid:int,body:dict):
@@ -116,7 +119,16 @@ def register(app,db):
                 if not text or len(text)>10000:raise HTTPException(422,'Nota vuota o troppo lunga')
                 crm.change(c,dict(row),payload=crm.dumps({'text':text}),reason='Modifica nota')
             elif row['kind']=='reward' and body.get('status') in ('proposed','assigned'):
-                data=json.loads(row['payload']);data['status']=body['status'];crm.change(c,dict(row),payload=crm.dumps(data),reason='Stato riconoscimento confermato')
+                ps,mapping,members=groups(c);visible,pending=crm.states(c,mapping)
+                owner=next((pid for pid,rows in visible.items() if any(r['id']==rid for r in rows)),None)
+                if owner is None:raise HTTPException(409,'Riassegna prima il riconoscimento a un proprietario certo')
+                data=json.loads(row['payload'])
+                duplicates=[r for r in visible[owner] if r['kind']=='reward' and r['id']!=rid and r['campaign_id']==row['campaign_id'] and crm.normalized(r['data']['type'])==crm.normalized(data['type'])]
+                if body['status']=='assigned' and duplicates:
+                    if body.get('allow_duplicate') is not True or len(str(body.get('reason','')).strip())<5:raise HTTPException(409,'Possibile doppio premio: conferma esplicita e motivazione richieste')
+                    data['exception_reason']=body['reason']
+                data['status']=body['status'];crm.change(c,dict(row),payload=crm.dumps(data),reason='Stato riconoscimento confermato: '+str(body.get('reason','')))
+
             else:raise HTTPException(422,'Modifica non supportata')
         return {'ok':True}
 
@@ -124,7 +136,10 @@ def register(app,db):
     def unresolved():
         with db() as c:
             ps,mapping,members=groups(c);rows=crm.states(c,mapping)[1]
-            for row in rows:row['owners']=[{'id':i,'name':ps[i]['name'],'email':ps[i]['email']} for i in row['origins']]
+            tags={r['id']:r['name'] for r in c.execute('SELECT id,name FROM crm_tags')}
+            for row in rows:
+                row['owners']=[{'id':i,'name':ps[i]['name'],'email':ps[i]['email']} for i in row['origins']]
+                row['label']=tags.get(row['tag_id'],'Tag') if row['kind']=='tag' else 'VIP manuale' if row['kind']=='vip' else row['data'].get('text') or row['data'].get('name') or row['kind']
             return rows
 
     @app.post('/api/v22/records/{rid}/reassign')
@@ -178,3 +193,16 @@ def register(app,db):
         from .strategic_export import export
         with db() as c:blob,format=export(c,body)
         return Response(blob,media_type='text/csv; charset=utf-8' if format=='csv' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',headers={'Content-Disposition':f'attachment; filename="EVENTLY-lista-strategica.{format}"'})
+
+    @app.get('/api/v22/rewards')
+    def reward_history(q:str='',campaign_id:int|None=None,status:str='',page:int=1):
+        with db() as c:
+            report=people_report(c);people={p['id']:p for p in report[0]};visible,_=crm.states(c,report[2]);campaigns={r['id']:r['name'] for r in c.execute('SELECT * FROM crm_campaigns')};rows=[]
+            for pid,records in visible.items():
+                for r in records:
+                    if r['kind']!='reward' or (campaign_id is not None and r['campaign_id']!=campaign_id) or (status and r['data']['status']!=status):continue
+                    row={**r,'person_id':pid,'person_name':people[pid]['name'],'campaign_name':campaigns.get(r['campaign_id'],'Nessuna iniziativa')}
+                    if q.casefold() not in (row['person_name']+' '+r['data']['name']+' '+r['data']['type']+' '+row['campaign_name']).casefold():continue
+                    rows.append(row)
+            rows.sort(key=lambda r:r['id'],reverse=True);total=len(rows);page=max(1,page)
+            return {'rows':rows[(page-1)*50:page*50],'total':total,'page':page,'page_size':50}

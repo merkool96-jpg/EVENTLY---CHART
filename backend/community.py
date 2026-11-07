@@ -28,6 +28,11 @@ def match(p,events,key,config,asof=None,start='',end=''):
     ids=[eid for eid,v in p['event_data'].items() if v['confirmed'] and events[eid]['date']<=limit]
     days=[events[eid]['date'] for eid in ids];count=len(ids);last=max(days,default='')
     recent=lambda n:sum(d>=(today-timedelta(days=n-1)).isoformat() for d in days)
+    if key=='increased':
+        if not start or not end:return False
+        begin=date.fromisoformat(start);finish=date.fromisoformat(end);length=(finish-begin).days+1
+        previous=begin-timedelta(days=length)
+        return sum(start<=d<=end for d in days)>sum(previous.isoformat()<=d<start for d in days)
     if key=='super':return count>=config['super_visits']
     if key=='regular':return recent(config['regular_days'])>=config['regular_visits']
     if key=='new':return bool(days and start and start<=min(days)<= (end or limit))
@@ -52,7 +57,7 @@ def segments(c,report,start='',end='',asof=None):
             prior=sum(match(p,report[1],key,config,previous.isoformat()) for p in report[0]);comparison=f'Stesso criterio al {previous.isoformat()}, ricostruito dalla storia conosciuta oggi'
         f={'community_segment':key}
         if key=='new':f.update(segment_start=start,segment_end=end)
-        results.append({'key':key,'name':name,'definition':definition,'count':len(ids),'previous_count':prior,'change':len(ids)-prior,'comparison':comparison,'filters':f})
+        results.append({'key':key,'name':name,'definition':definition,'count':len(ids),'previous_count':prior,'change':None if key=='vip_candidates' else len(ids)-prior,'comparison':('Stato VIP storico non ricostruito: variazione non disponibile' if key=='vip_candidates' else comparison),'filters':f})
     for row in c.execute('SELECT * FROM crm_segments WHERE archived=0 ORDER BY id'):
         f=json.loads(row['filters']);results.append({'key':'custom_'+str(row['id']),'name':row['name'],'definition':'Segmento personalizzato: filtri salvati, membri ricalcolati','count':len(select_people(report,f)),'change':None,'comparison':'Confronto temporale non disponibile per questo filtro personalizzato','filters':f})
     return results

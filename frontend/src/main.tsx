@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import "./style.css";
 import { EventsPage } from "./EventsPage";
+import {CommunitySegments,VIPConsole,CRMProfile,EventComparison} from "./CommunityUI";
 import { ParticipantsChart } from "./ParticipantsChart";
 import { ImportWizard } from "./ImportWizard";
 import { MergeDialog, EditPersonDialog, ExportDialog } from "./PersonDialogs";
@@ -60,6 +61,7 @@ type Event = {
   edition:string;
   archived:number;
   cost: number;
+  cost_defined?:boolean;
   participant_value_cents: number | null;
   participants: number;
   registrations: number;
@@ -104,8 +106,8 @@ type Stats = {
   returning: number;
   timeline: Event[];
 };
-const euro = (n: number) =>
-  new Intl.NumberFormat("it-IT", {
+const euro = (n: number|null) =>
+  n===null?'Non definito':new Intl.NumberFormat("it-IT", {
     style: "currency",
     currency: "EUR",
     maximumFractionDigits: 2,
@@ -217,6 +219,7 @@ function App() {
       await fn();
       if (message) setNotice(message);
       await refresh(scope);
+      if(scope==='all')setPanelVersion(v=>v+1);
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -282,16 +285,11 @@ function App() {
       </th>
     );
   }
+  const openSegment=(filters:any)=>{setPeoplePreset(filters);setPanelVersion(v=>v+1);setPage('Partecipanti')};
   const nav = [
-    { icon: LayoutDashboard, label: "Dashboard" },
-    { icon: CalendarDays, label: "Eventi" },
-    {icon:Upload,label:"Importazioni"},
-    { icon: Users, label: "Partecipanti" },
-    { icon: GitMerge, label: "Identità" },
-    {icon:Check,label:"Qualità Dati"},
-    { icon: Trophy, label: "Top 50" },
-    {icon:Sparkles,label:"Community Analytics"},
-    {icon:Users,label:"Impostazioni"},
+    {icon:LayoutDashboard,label:'Dashboard'},{icon:CalendarDays,label:'Eventi'},{icon:Upload,label:'Importazioni'},
+    {icon:Users,label:'Partecipanti'},{icon:Trophy,label:'Top 50'},{icon:Users,label:'Segmenti Community'},{icon:Trophy,label:'VIP & Rewards'},
+    {icon:GitMerge,label:'Identità'},{icon:Check,label:'Qualità Dati'},{icon:Sparkles,label:'Community Analytics'},{icon:CalendarDays,label:'Performance eventi'},{icon:Users,label:'Impostazioni'},
   ];
   return (
     <div className="shell">
@@ -312,18 +310,19 @@ function App() {
 
         <nav>
           {nav.map(({ icon: I, label }) => (
-            <React.Fragment key={label}>{({Dashboard:'Operatività',Partecipanti:'Persone','Top 50':'Analisi',Impostazioni:'Impostazioni'} as any)[label]&&<p className="nav-label">{({Dashboard:'Operatività',Partecipanti:'Persone','Top 50':'Analisi',Impostazioni:'Impostazioni'} as any)[label]}</p>}
+            <React.Fragment key={label}>{({Dashboard:'Operatività',Partecipanti:'Community','Community Analytics':'Analisi',Impostazioni:'Impostazioni'} as any)[label]&&<p className="nav-label">{({Dashboard:'Operatività',Partecipanti:'Community','Community Analytics':'Analisi',Impostazioni:'Impostazioni'} as any)[label]}</p>}
             <button
-              aria-label={label}
+              aria-label={label==='Community Analytics'?'Community Insights':label}
               key={label}
               className={page === label ? "active" : ""}
               onClick={() => {
+                setPeoplePreset(null);
                 setPage(label);
                 setQuery("");
               }}
             >
               <I size={19} />
-              <span>{label==="Dashboard"?"Overview":label==="Identità"?"Centro Verifica":label}</span>
+              <span>{label==="Dashboard"?"Overview":label==="Identità"?"Centro Verifica":label==='Community Analytics'?'Community Insights':label}</span>
               {label === "Identità" && matches.length > 0 && (
                 <b>{matches.length}</b>
               )}
@@ -346,7 +345,7 @@ function App() {
       <main>
         <header>
           <span>
-            Workspace <ChevronRight size={13} /> <strong>{page}</strong>
+            Workspace <ChevronRight size={13} /> <strong>{page==='Community Analytics'?'Community Insights':page}</strong>
           </span>
           <div>
             <i className="dot" /> Ambiente locale{" "}
@@ -357,7 +356,7 @@ function App() {
           <div className="page-title">
             <div>
               <p className="eyebrow">IL TUO NETWORK, UNA STORIA ALLA VOLTA</p>
-              <h1>{page === "Dashboard" ? "Ogni incontro conta." : page}</h1>
+              <h1>{page === "Dashboard" ? "Ogni incontro conta." : page==='Community Analytics'?'Community Insights':page}</h1>
               <p>
                 {
                   (
@@ -535,9 +534,12 @@ function App() {
             </>
           )}
           {page==='Eventi'&&<EventsPage events={events} onOpen={setWorkspace} onEdit={openEvent} onCreate={()=>openEvent()} onImport={id=>{setTarget(String(id));setModal('import')}} onArchive={e=>{void act(()=>api('/v2/events/'+e.id+'/archive',json({archived:!e.archived})),e.archived?'Evento ripristinato':'Evento archiviato')}}/>}
-          {(page==='Partecipanti'||page==='Top 50')&&<PeoplePage key={page+panelVersion} ranked={page==='Top 50'} onOpen={showProfile} preset={peoplePreset}/>}
+          {(page==='Partecipanti'||page==='Top 50')&&<PeoplePage key={page} version={panelVersion} ranked={page==='Top 50'} onOpen={showProfile} preset={peoplePreset}/>}
           {page==='Importazioni'&&<ImportHistory/>}
-          {page==='Community Analytics'&&<AnalyticsPage onEvent={setWorkspace} onSegment={filters=>{setPeoplePreset(filters);setPanelVersion(v=>v+1);setPage('Partecipanti')}}/>}
+          {page==='Segmenti Community'&&<CommunitySegments onSegment={openSegment} version={panelVersion}/>}
+          {page==='VIP & Rewards'&&<VIPConsole onSegment={openSegment} onOpen={showProfile} version={panelVersion}/>}
+          {page==='Performance eventi'&&<EventComparison version={panelVersion}/>}
+          {page==='Community Analytics'&&<AnalyticsPage version={panelVersion} onEvent={setWorkspace} onSegment={filters=>{setPeoplePreset(filters);setPanelVersion(v=>v+1);setPage('Partecipanti')}}/>}
           {page==='Qualità Dati'&&<QualityPage onOpen={showProfile} onEvent={setWorkspace} onChange={()=>{void refresh()}}/>}
           {page==='Impostazioni'&&<SettingsPage/>}
           {page==='Identità'&&<><ReviewPage key={panelVersion} onMerge={(a,b)=>setMergeTarget({a,b})} onOpen={showProfile} onChange={(aggregates=false)=>{void refresh(aggregates?'all':'review')}}/><section className="panel history-panel"><h3>Storico decisioni</h3>{history.slice(0,100).map(h=><div className="history-row" key={h.id}><div><strong>{h.action} · #{h.a}{h.b?' / #'+h.b:''}</strong><small>{h.reason} · {h.created_at} UTC</small></div>{h.action==='merge'&&h.active===1&&<button disabled={busy} onClick={()=>act(()=>api('/identity/links/'+h.link_id+'/undo',{method:'POST'}),'Unione annullata').then(()=>setPanelVersion(v=>v+1))}>Annulla unione</button>}</div>)}</section></>}
@@ -591,7 +593,7 @@ function App() {
                               date: f.get("date"),
                               location: f.get("location"),
                           category:f.get("category"),edition:f.get("edition"),registration_complete:f.get("registration_complete")==="on",
-                              cost: Math.round(Number(f.get("cost")) * 100),
+                              cost: Math.round(Number(f.get("cost")) * 100),cost_defined:String(f.get("cost")||'')!=='',
                               participant_value_cents:
                                 value === ""
                                   ? null
@@ -654,8 +656,8 @@ function App() {
                       min="0"
                       step="0.01"
                       name="cost"
-                      required
-                      defaultValue={(edit?.cost || 0) / 100}
+                      placeholder="Non definito"
+                      defaultValue={edit?.cost_defined||edit?.cost?edit.cost/100:""}
                     />
                   </label>
                   <button disabled={busy} className="primary">
@@ -672,6 +674,7 @@ function App() {
                 onDone={(message) => {
                   setNotice(message);
                   setModal(null);
+                  setPanelVersion(v=>v+1);
                   void refresh();
                 }}
               />
@@ -716,7 +719,7 @@ function App() {
           }}
         />
       )}
-      {workspace!==null&&<EventWorkspace id={workspace} onClose={()=>setWorkspace(null)} onOpen={p=>{setWorkspace(null);void showProfile(p)}} onChange={()=>{void refresh();setPanelVersion(v=>v+1)}}/>}
+      {workspace!==null&&<EventWorkspace version={panelVersion} id={workspace} onClose={()=>setWorkspace(null)} onOpen={p=>{setWorkspace(null);void showProfile(p)}} onChange={()=>{void refresh();setPanelVersion(v=>v+1)}}/>}
       {profile && (
         <div className="overlay">
           <section
@@ -806,6 +809,7 @@ function App() {
                 )}
               </div>
             ))}
+<CRMProfile id={profile.id} onChanged={()=>{setPanelVersion(v=>v+1);void refresh()}}/>
             <h3 className="profile-subtitle">La storia degli incontri</h3>
             {profile.events.map((e) => (
               <div className="profile-event" key={e.id}>
@@ -883,7 +887,7 @@ function EventCard({
           {e.participant_value_cents === null
             ? "non definito"
             : euro(e.participant_value_cents)}{" "}
-          · Costo: {euro(e.cost)}
+          · Costo: {euro(e.cost_defined?e.cost:null)}
         </small>
       </div>
     </article>

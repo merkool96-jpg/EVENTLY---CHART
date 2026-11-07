@@ -54,22 +54,24 @@ def change(c,row,operator='Amministratore locale',batch=None,reason='',**fields)
 
 def snapshot(c):
     from .importing import snapshot as original
-    h=hashlib.sha256(original(c).encode())
-    for table in ('crm_records','crm_tags','crm_campaigns','community_settings','crm_segments'):
-        h.update(dumps([dict(r) for r in c.execute(f'SELECT * FROM {table} ORDER BY rowid')]).encode())
-    return h.hexdigest()
+    return original(c)
 
 
-def profile(c,pid):
+def profile(c,pid,history_page=1):
     ps,mapping,members=groups(c)
     if pid not in mapping:raise HTTPException(404,'Persona non trovata')
     rows,unresolved=states(c,mapping);gid=mapping[pid];records=rows.get(gid,[])
+    campaigns={r['id']:r['name'] for r in c.execute('SELECT id,name FROM crm_campaigns')};events={r['id']:r['name'] for r in c.execute('SELECT id,name FROM events')}
     rewards=[r for r in records if r['kind']=='reward'];dups={}
+    for r in rewards:r['campaign_name']=campaigns.get(r['campaign_id'],'Nessuna iniziativa');r['event_name']=events.get(r['event_id'],'')
     for r in rewards:
         key=(r['campaign_id'],normalized(r['data']['type']));dups[key]=dups.get(key,0)+1
     for r in rewards:r['potential_duplicate']=dups[(r['campaign_id'],normalized(r['data']['type']))]>1
-    history=[dict(r) for r in c.execute('SELECT * FROM crm_audit ORDER BY id DESC') if r['record_id'] in {x['id'] for x in records}]
-    return {'id':gid,'members':members[gid],'vip':any(r['kind']=='vip' and r['data'].get('enabled') for r in records),'records':records,'unresolved':[r for r in unresolved if gid in r['possible_owners']],'history':history[:200]}
+    owned_ids={r['id'] for r in c.execute('SELECT id,scope FROM crm_records') if {mapping.get(i) for i in json.loads(r['scope'])}=={gid}}
+    history=[dict(r) for r in c.execute('SELECT * FROM crm_audit ORDER BY id DESC') if r['record_id'] in owned_ids]
+    tag_ids={r['tag_id'] for r in records if r['kind']=='tag'}
+    tags=[dict(r) for r in c.execute('SELECT * FROM crm_tags') if r['id'] in tag_ids]
+    return {'tags':tags,'id':gid,'members':members[gid],'vip':any(r['kind']=='vip' and r['data'].get('enabled') for r in records),'records':records,'unresolved':[r for r in unresolved if gid in r['possible_owners']],'history':history[(max(1,history_page)-1)*50:max(1,history_page)*50],'history_total':len(history),'history_page':max(1,history_page)}
 
 
 def validate_reward(c,data):
@@ -86,10 +88,14 @@ def preview(c,body):
     from .reporting import people_report
     from .querying import select_people
     action=body.get('action');data=body.get('data',{});operator=str(body.get('operator') or 'Amministratore locale')[:120]
+    if not isinstance(data,dict) or any(body.get(key) is not None and (not isinstance(body[key],list) or any(type(i) is not int or i<1 for i in body[key])) for key in ('ids','exclude_ids')):raise HTTPException(422,'Selezione CRM non valida')
     if action not in ('vip_add','vip_remove','tag_add','tag_remove','reward'):raise HTTPException(422,'Azione CRM non valida')
     selected=select_people(people_report(c),body.get('filters'),body.get('q',''))
     if body.get('ids') is not None:selected=[p for p in selected if p['id'] in set(body['ids'])]
+    if body.get('exclude_ids'):
+        excluded=set(body['exclude_ids']);selected=[p for p in selected if p['id'] not in excluded]
     if action.startswith('tag_'):
+        if not isinstance(data.get('tag_ids'),list) or any(type(i) is not int for i in data['tag_ids']):raise HTTPException(422,'Selezione tag non valida')
         tag_ids=set(data.get('tag_ids',[]))
         if not tag_ids:raise HTTPException(422,'Seleziona almeno un tag')
         for tid in tag_ids:
@@ -99,8 +105,9 @@ def preview(c,body):
     for p in selected:
         rows=visible.get(p['id'],[])
         if action=='reward':
-            duplicate=any(r['kind']=='reward' and r['campaign_id']==data.get('campaign_id') and normalized(r['data']['type'])==normalized(data['type']) for r in rows)
-            if duplicate:duplicates.append({'id':p['id'],'name':p['name']})
+            existing_rewards=[r for r in rows if r['kind']=='reward' and r['campaign_id']==data.get('campaign_id') and normalized(r['data']['type'])==normalized(data['type'])]
+            duplicate=bool(existing_rewards)
+            if duplicate:duplicates.append({'id':p['id'],'name':p['name'],'statuses':sorted({r['data']['status'] for r in existing_rewards})})
             if duplicate and not data.get('allow_duplicate'):continue
         elif action.startswith('vip_'):
             if p.get('vip',False)==(action=='vip_add'):continue
@@ -144,6 +151,13 @@ def undo(c,token):
     config=json.loads(row['config']);ps,mapping,members=groups(c)
     for p in config['changes']:
         if any(set(members[mapping[i]])!=set(p['members']) for i in p['members']):raise HTTPException(409,'I gruppi identità sono cambiati: controlla prima la proprietà dei dati CRM')
+    own_order=c.execute('SELECT rowid FROM crm_batches WHERE token=?',(token,)).fetchone()[0]
+    own_members={i for p in config['changes'] for i in p['members']}
+    for later in c.execute('SELECT config FROM crm_batches WHERE rowid>? AND committed=1 AND undone=0',(own_order,)):
+        other=json.loads(later['config']);overlap=own_members & {i for p in other['changes'] for i in p['members']}
+        same_vip=config['action'].startswith('vip_') and other['action'].startswith('vip_')
+        same_tags=config['action'].startswith('tag_') and other['action'].startswith('tag_') and bool(set(config['data']['tag_ids']) & set(other['data']['tag_ids']))
+        if overlap and (same_vip or same_tags):raise HTTPException(409,'Esistono operazioni successive sugli stessi VIP o tag: annullamento non sicuro')
     logs=c.execute('SELECT * FROM crm_audit WHERE batch=? ORDER BY id DESC',(token,)).fetchall()
     for logrow in logs:
         after=json.loads(logrow['after_data']);current=c.execute('SELECT * FROM crm_records WHERE id=?',(logrow['record_id'],)).fetchone()

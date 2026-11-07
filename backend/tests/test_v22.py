@@ -114,3 +114,100 @@ def test_20_ten_thousand_people_and_full_export(client):
     cards=client.get('/api/v22/segments').json();assert len(cards)>=6
     ex=client.post('/api/v22/export/preview',json={'filters':{}}).json();assert ex['count']==10000 and ex['with_email']==10000
     blob=client.post('/api/v22/export',json={'format':'csv'}).content;assert len(blob.decode('utf-8-sig').splitlines())==10001
+
+
+def test_post_merge_reward_warning_note_history_and_safe_later_undo(client):
+    with module.db(True) as c:c.executemany('INSERT INTO people(name,email) VALUES(?,?)',[('Mario Rossi','m@example.test'),('Mario Rosssi','m@example.test')])
+    campaign=client.post('/api/v22/campaigns',json={'name':'Riconoscimenti'}).json()['id']
+    data={'name':'Premio','type':'Tshirt','date':date.today().isoformat(),'status':'proposed','campaign_id':campaign}
+    for pid in (1,2):confirm(client,batch(client,'reward',[pid],data))
+    client.post('/api/matches/decision',json={'a':1,'b':2,'action':'merge'})
+    profile=client.get('/api/v22/people/1').json();rewards=[r for r in profile['records'] if r['kind']=='reward'];assert all(r['potential_duplicate'] for r in rewards)
+    r=rewards[0]
+    assert client.patch('/api/v22/records/'+str(r['id']),json={'revision':r['revision'],'status':'assigned'}).status_code==409
+    assert client.patch('/api/v22/records/'+str(r['id']),json={'revision':r['revision'],'status':'assigned','allow_duplicate':True,'reason':'Secondo contributo distinto confermato'}).status_code==200
+    tag=client.post('/api/v22/tags',json={'name':'Partner'}).json()['id']
+    confirm(client,batch(client,'tag_add',[1],{'tag_ids':[tag]}))
+    removed=batch(client,'tag_remove',[1],{'tag_ids':[tag]});confirm(client,removed)
+    confirm(client,batch(client,'tag_add',[1],{'tag_ids':[tag]}))
+    assert client.post('/api/v22/bulk/'+removed['token']+'/undo').status_code==409
+    nid=client.post('/api/v22/people/1/notes',json={'text':'Testo iniziale','operator':'Admin sintetico'}).json()['id']
+    with module.db(True) as c:
+        from backend.crm import change
+        for i in range(55):change(c,dict(c.execute('SELECT * FROM crm_records WHERE id=?',(nid,)).fetchone()),payload=json.dumps({'text':f'Versione {i}'}))
+    note=next(r for r in client.get('/api/v22/people/1').json()['records'] if r['id']==nid)
+    assert note['author']=='Admin sintetico'
+    assert client.patch('/api/v22/records/'+str(nid),json={'delete':True,'revision':note['revision']}).status_code==422
+    assert client.patch('/api/v22/records/'+str(nid),json={'delete':True,'confirm':True,'revision':note['revision']}).status_code==200
+    history=client.get('/api/v22/people/1?history_page=2').json();assert history['history'] and history['history_total']>50
+    with module.db() as c:
+        assert c.execute('SELECT active FROM crm_records WHERE id=?',(nid,)).fetchone()[0]==0
+        assert c.execute('SELECT COUNT(*) FROM crm_record_origins WHERE record_id=?',(nid,)).fetchone()[0]==2
+        assert c.execute('PRAGMA foreign_key_check').fetchall()==[]
+
+
+def test_thresholds_archive_exclusion_custom_segment_and_formula_safe(client):
+    seed();confirm(client,batch(client,'vip_add',[1]))
+    cfg=client.get('/api/v22/settings').json();cfg['super_visits']=6
+    assert client.put('/api/v22/settings',json=cfg).status_code==200
+    f={'community_segment':'super'}
+    assert client.get('/api/v2/people',params={'filters':json.dumps(f)}).json()['total']==0
+    cfg['super_visits']=5;client.put('/api/v22/settings',json=cfg)
+    client.post('/api/v2/events/1/archive',json={'archived':True})
+    assert client.get('/api/v2/people',params={'filters':json.dumps(f)}).json()['total']==1
+    client.post('/api/v2/events/1/analytics-impact',json={'include':False,'confirm':True})
+    assert client.get('/api/v2/people',params={'filters':json.dumps(f)}).json()['total']==0
+    assert client.get('/api/people/1').json()['vip']
+    sid=client.post('/api/v22/segments',json={'name':'VIP ricercati','filters':{'vip':True,'search_text':'Persona0'}}).json()['id']
+    custom=next(s for s in client.get('/api/v22/segments').json() if s['key']=='custom_'+str(sid));assert custom['count']==1
+    with module.db(True) as c:c.execute("UPDATE people SET name='=FORMULA(1)' WHERE id=2")
+    blob=client.post('/api/v22/export',json={'columns':['id','name','email'],'format':'xlsx'}).content
+    book=load_workbook(io.BytesIO(blob));assert all(cell.data_type!='f' for row in book.active for cell in row)
+    assert any(str(row[1]).startswith("'=FORMULA") for row in list(book.active.values)[1:])
+    cfg['super_visits']=0;assert client.put('/api/v22/settings',json=cfg).status_code==422
+
+
+def test_schema5_backup_failure_leaves_v21_untouched(tmp_path,monkeypatch):
+    from backend import migrations
+    path=tmp_path/'v21.db';migrate(path,4)
+    def fail(*args):raise RuntimeError('synthetic backup failure')
+    monkeypatch.setattr(migrations,'backup_database',fail)
+    with pytest.raises(RuntimeError):migrate(path)
+    with sqlite3.connect(path) as c:
+        assert c.execute('PRAGMA user_version').fetchone()[0]==4
+        assert not c.execute("SELECT 1 FROM sqlite_master WHERE name='crm_records'").fetchone()
+
+
+def test_crm_backup_restore_and_missing_financial_values(client):
+    seed(1,1);confirm(client,batch(client,'vip_add',[1]));client.post('/api/v22/people/1/notes',json={'text':'Da conservare nel backup'})
+    backup=client.post('/api/backup').json()['file'];blob=client.get('/api/v2/backups/'+backup).content
+    client.post('/api/v22/people/1/notes',json={'text':'Aggiunta successiva'})
+    preview=client.post('/api/v2/restore/preview',files={'file':('restore.db',blob)}).json()
+    assert preview['current_counts']['crm_notes']==2 and preview['counts']['crm_notes']==1
+    assert client.post('/api/v2/restore/'+preview['token']+'/confirm').status_code==200
+    profile=client.get('/api/v22/people/1').json();assert profile['vip'] and len([r for r in profile['records'] if r['kind']=='note'])==1
+    perf=client.get('/api/v22/performance/1').json();assert perf['cost'] is None and perf['reported_spend'] is None
+    client.put('/api/events/1',json={'name':'Zero documentato','date':date.today().isoformat(),'cost':0,'participant_value_cents':0})
+    assert client.get('/api/v22/performance/1').json()['cost']==0
+    with module.db() as c:assert c.execute('PRAGMA foreign_key_check').fetchall()==[]
+
+
+def test_event_value_update_preserves_other_metadata_and_audit(client):
+    e=client.post('/api/events',json={'name':'Conserva dati','date':'2026-01-01','category':'Community','location':'Luogo originale','cost':25000,'participant_value_cents':2000}).json()['id']
+    client.post(f'/api/v2/events/{e}/archive',json={'archived':True})
+    assert client.put(f'/api/events/{e}',json={'name':'Conserva dati','date':'2026-01-01','participant_value_cents':4000}).status_code==200
+    row=next(r for r in client.get('/api/events?include_archived=true').json() if r['id']==e)
+    assert row['cost']==25000 and row['cost_defined']==1 and row['category']=='Community' and row['location']=='Luogo originale'
+    assert row['archived']==1 and row['participant_value_cents']==4000
+    with module.db() as c:assert c.execute("SELECT COUNT(*) FROM crm_audit WHERE action='event_metadata'").fetchone()[0]==1
+
+
+def test_presence_preview_invalidates_when_manual_community_filter_changes(client):
+    seed(2,1)
+    confirm(client,batch(client,'vip_add',[1]))
+    draft=client.post('/api/v2/bulk/preview',json={'event_id':1,'status':'absent','filters':{'vip':True}})
+    assert draft.status_code==200,draft.text
+    confirm(client,batch(client,'vip_remove',[1]))
+    result=client.post('/api/v2/bulk/'+draft.json()['token']+'/confirm')
+    assert result.status_code==409,result.text
+    assert client.get('/api/v22/performance/1').json()['presences']==1

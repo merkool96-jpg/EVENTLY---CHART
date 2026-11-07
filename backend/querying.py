@@ -5,6 +5,8 @@ from pydantic import BaseModel,Field,field_validator,model_validator
 from .reporting import matches_filter
 
 class Filters(BaseModel):
+    person_ids:list[int]|None=None
+    search_text:str=''
     community_segment:str=''
     segment_start:str=''
     segment_end:str=''
@@ -38,6 +40,8 @@ class Filters(BaseModel):
     @model_validator(mode='after')
     def bounds(self):
         if self.start and self.end and self.start>self.end:raise ValueError('Periodo non valido')
+        if self.segment_start and self.segment_end and self.segment_start>self.segment_end:raise ValueError('Periodo segmento non valido')
+        if self.community_segment and self.community_segment not in ('super','regular','new','recovery','positive','vip_candidates','increased'):raise ValueError('Segmento non valido')
         if self.max_visits is not None and self.max_visits<self.min_visits:raise ValueError('Limiti presenze invertiti')
         if self.max_value is not None and self.max_value<self.min_value:raise ValueError('Limiti valore invertiti')
         return self
@@ -47,14 +51,17 @@ def select_people(report,filters=None,q='',sort='visits',direction='desc',ranked
     f=filters if isinstance(filters,Filters) else Filters(**(filters or {}))
     people,events,_=report
     selected=[]
+    person_ids=set(f.person_ids) if f.person_ids is not None else None
     scoped=bool(f.event_id or f.category or f.start or f.end or f.pricing)
     for original in people:
+        if person_ids is not None and original['id'] not in person_ids:continue
         if f.vip is not None and original.get('vip',False)!=f.vip:continue
         if f.tag_ids and not set(f.tag_ids)<={t['id'] for t in original.get('tags',[])}:continue
         if (f.reward_campaign is not None or f.reward_status) and not any((f.reward_campaign is None or r['campaign_id']==f.reward_campaign) and (not f.reward_status or r['status']==f.reward_status) for r in original.get('_reward_info',[])):continue
         if f.community_segment:
             from .community import match
             if not match(original,events,f.community_segment,original.get('_community_settings',{}),f.asof or None,f.segment_start,f.segment_end):continue
+        if f.search_text and not matches_filter(original,f.search_text):continue
         if not matches_filter(original,q) or original['visits']<f.global_min_visits:continue
         p={**original};p['first_seen_global']=p['first_seen'];p['last_seen_global']=p['last_seen']
         visits={eid:v for eid,v in p['event_data'].items() if (not f.event_id or eid==f.event_id) and (not f.category or events[eid]['category']==f.category) and (not f.start or events[eid]['date']>=f.start) and (not f.end or events[eid]['date']<=f.end) and (not f.pricing or (f.pricing=='free' and events[eid]['participant_value_cents']==0) or (f.pricing=='paid' and events[eid]['participant_value_cents'] is not None and events[eid]['participant_value_cents']>0) or (f.pricing=='undefined' and events[eid]['participant_value_cents'] is None))}

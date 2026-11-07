@@ -55,12 +55,15 @@ def analytics(c,filters=None,window=90,reference=None):
     for eid,event in events.items():
         ids={pid for pid,es in confirmed.items() if eid in es}
         newbies={p['id'] for p in people if p['id'] in ids and min(events[x]['date'] for x in confirmed[p['id']])==event['date']}
-        returned={pid for pid in ids if any(event['date']<events[x]['date']<=(date.fromisoformat(event['date'])+timedelta(days=window)).isoformat() for x in confirmed[pid])}
+        returned={pid for pid in ids if any(event['date']<events[x]['date']<=min((date.fromisoformat(event['date'])+timedelta(days=window)).isoformat(),today.isoformat()) for x in confirmed[pid])}
         old={pid for pid in ids if any(events[x]['date']<event['date'] for x in confirmed[pid])}
         records=[p['event_data'][eid] for p in people if eid in p['event_data']]
         enrolled=[v for v in records if 'registered' in v['sources']]
         covered=bool(event['registration_complete'] and enrolled and len(enrolled)==len(records) and all(v['status'] in ('confirmed','absent','cancelled') and not v['conflict'] for v in enrolled))
-        event_rows.append({**event,'new':len(newbies),'returning':len(old),'returned_after':len(returned),'new_returned_after':len(newbies & returned),'denominator':len(ids),'window_days':window,'recent_cohort':(today-date.fromisoformat(event['date'])).days<window,'return_rate':len(returned)/len(ids) if ids else None,'conversion':sum(v['confirmed'] for v in enrolled)/len(enrolled) if covered else None,'conversion_reason':'' if covered else 'Dati insufficienti: iscritti completi ed esiti non attestati'})
+        mature=(today-date.fromisoformat(event['date'])).days>=window
+        opportunities=sum(event['date']<e['date']<=min((date.fromisoformat(event['date'])+timedelta(days=window)).isoformat(),today.isoformat()) for e in events.values())
+        return_reason='Periodo di osservazione non ancora completo' if not mature else 'Nessuna occasione di ritorno nella finestra conosciuta' if not opportunities else 'Nessuna presenza idonea' if not ids else ''
+        event_rows.append({**event,'new':len(newbies),'returning':len(old),'returned_after':len(returned),'new_returned_after':len(newbies & returned),'denominator':len(ids),'window_days':window,'recent_cohort':(today-date.fromisoformat(event['date'])).days<window,'return_rate':len(returned)/len(ids) if ids and mature and opportunities else None,'return_reason':return_reason,'return_opportunities':opportunities,'conversion':sum(v['confirmed'] for v in enrolled)/len(enrolled) if covered else None,'conversion_reason':'' if covered else 'Dati insufficienti: iscritti completi ed esiti non attestati'})
     affinity=[]
     for i,a in enumerate(event_rows):
         for b in event_rows[i+1:]:

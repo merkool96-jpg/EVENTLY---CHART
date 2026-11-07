@@ -21,7 +21,7 @@ from .reporting import people_report, events_report, public_person, matches_filt
 from .profiles import canonical_profiles,save_profile,recommend
 from .exporting import export_file
 
-app = FastAPI(title='EVENTLY', version='2.1.0')
+app = FastAPI(title='EVENTLY', version='2.2.0')
 @app.exception_handler(sqlite3.Error)
 async def storage_error(request,error):
     return JSONResponse(status_code=500,content={'detail':'Operazione non completata. I dati sono stati conservati: riprova o controlla il backup.'})
@@ -60,6 +60,7 @@ class Event(BaseModel):
     category:str=Field(default='',max_length=100)
     edition:str=Field(default='',max_length=100)
     registration_complete:bool=False
+    cost_defined:bool|None=None
     cost: int = Field(default=0,ge=0,le=10000000000)
     participant_value_cents: int | None = Field(default=None,ge=0,le=10000000000)
 
@@ -104,7 +105,7 @@ def active_event(c,eid):
 def health():
     with db() as c:
         version=c.execute('PRAGMA user_version').fetchone()[0]
-    return {'status':'ok','schema_version':version,'version':'2.1.0'}
+    return {'status':'ok','schema_version':version,'version':'2.2.0'}
 
 
 @app.post('/api/backup')
@@ -124,14 +125,23 @@ def create_event(e:Event):
     with db(True) as c:
         eid=c.execute('INSERT INTO events(name,date,location,cost,participant_value_cents) VALUES(?,?,?,?,?)',(e.name,str(e.date),e.location,e.cost,e.participant_value_cents)).lastrowid
         c.execute('UPDATE events SET category=?,edition=?,registration_complete=? WHERE id=?',(e.category,e.edition,int(e.registration_complete),eid))
+        c.execute('UPDATE events SET cost_defined=? WHERE id=?',(int(e.cost_defined if e.cost_defined is not None else 'cost' in e.model_fields_set),eid))
     return {'id':eid}
 
 
 @app.put('/api/events/{event_id}')
 def update_event(event_id:int,e:Event):
     with db(True) as c:
-        active_event(c,event_id)
-        c.execute('UPDATE events SET name=?,date=?,location=?,cost=?,participant_value_cents=?,category=?,edition=?,registration_complete=? WHERE id=?',(e.name,str(e.date),e.location,e.cost,e.participant_value_cents,e.category,e.edition,int(e.registration_complete),event_id))
+        row=c.execute('SELECT * FROM events WHERE id=?',(event_id,)).fetchone()
+        if not row:raise HTTPException(404,'Evento non trovato')
+        before=dict(row);values={}
+        for key in ('name','date','location','cost','participant_value_cents','category','edition','registration_complete'):
+            if key in e.model_fields_set:
+                value=getattr(e,key);values[key]=str(value) if key=='date' else int(value) if key=='registration_complete' else value
+        if 'cost' in e.model_fields_set or e.cost_defined is not None:values['cost_defined']=int(e.cost_defined if e.cost_defined is not None else True)
+        if values:c.execute('UPDATE events SET '+','.join(key+'=?' for key in values)+' WHERE id=?',(*values.values(),event_id))
+        from .crm import log,dumps
+        log(c,'event_metadata',None,None,reason=dumps({'event_id':event_id,'before':before,'changes':values}))
     return {'ok':True}
 
 
