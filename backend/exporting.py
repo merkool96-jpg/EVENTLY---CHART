@@ -23,24 +23,24 @@ def data_rows(c,q='',filters=None):
     for p in selected:
         confirmed=[events[eid] for eid,v in p['event_data'].items() if v['confirmed']]
         dates=[events[eid]['date'] for eid in p['event_data']]
-        people_rows.append([p['id'],p['first_name'],p['last_name'],p['name'],p['email'],p['phone'],p['visits'],p['registrations'],p['unknown'],sum(e['participant_value_cents']==0 for e in confirmed),sum(e['participant_value_cents'] is not None and e['participant_value_cents']>0 for e in confirmed),Decimal(p['value'])/100,p['undefined_values'],date.fromisoformat(min(dates)) if dates else None,date.fromisoformat(max(dates)) if dates else None,'Nominativo incompleto' if p['incomplete'] else ('Nominativo completo, contatti mancanti' if not p['email'] and not p['phone'] else 'Completo'),date.fromisoformat(p['first_seen']) if p['first_seen'] else None,date.fromisoformat(p['last_seen']) if p['last_seen'] else None])
+        people_rows.append([p['id'],p['first_name'],p['last_name'],p['name'],p['email'],p['phone'],p['visits'],p['registrations'],p['unknown'],sum(e['participant_value_cents']==0 for e in confirmed),sum(e['participant_value_cents'] is not None and e['participant_value_cents']>0 for e in confirmed),Decimal(p['value'])/100,p['undefined_values'],date.fromisoformat(min(dates)) if dates else None,date.fromisoformat(max(dates)) if dates else None,'Nominativo incompleto' if p['incomplete'] else ('Nominativo completo, contatti mancanti' if not p['email'] and not p['phone'] else 'Completo'),date.fromisoformat(p['first_seen']) if p['first_seen'] else None,date.fromisoformat(p['last_seen']) if p['last_seen'] else None,p['absent'],p['cancelled'],p['conflicts'],Decimal(p['actual_spend'])/100])
         for eid,v in p['event_data'].items():
             e=events[eid];event_ids.add(eid)
             from .participations import LABELS
             status=LABELS[v['status']]+(' · conflitto' if v['conflict'] else '')
             value=e['participant_value_cents'] if v['confirmed'] else 0
-            attendance_rows.append([p['id'],p['name'],e['name'],date.fromisoformat(e['date']),'Presenza' if v['confirmed'] else 'Iscrizione',status,None if value is None else Decimal(value)/100])
+            attendance_rows.append([p['id'],p['name'],e['name'],date.fromisoformat(e['date']),'Presenza' if v['confirmed'] else 'Registrazione senza presenza',status,None if value is None else Decimal(value)/100,Decimal(v['amount'])/100])
     event_rows=[]
     for e in events_report(c,report):
         if (q or filters) and e['id'] not in event_ids:
             continue
         # Counts are scoped to the exported people, not the unfiltered archive.
         values=[p['event_data'][e['id']] for p in selected if e['id'] in p['event_data']]
-        event_rows.append([e['id'],e['name'],date.fromisoformat(e['date']),sum(v['confirmed'] for v in values),sum(not v['confirmed'] and v['registered'] for v in values),sum(not v['confirmed'] and not v['registered'] for v in values),None if e['participant_value_cents'] is None else Decimal(e['participant_value_cents'])/100])
+        event_rows.append([e['id'],e['name'],date.fromisoformat(e['date']),sum(v['confirmed'] for v in values),sum(not v['confirmed'] and v['registered'] for v in values),sum(v['unknown'] for v in values),None if e['participant_value_cents'] is None else Decimal(e['participant_value_cents'])/100,sum(v['absent'] for v in values),sum(v['cancelled'] for v in values),sum(v['conflict'] for v in values)])
     return [
-        ('Partecipanti',['ID persona','Nome principale','Cognome principale','Nominativo','Email','Telefono','Eventi con presenza confermata','Registrazioni senza presenza','Da verificare','Eventi gratuiti','Eventi con valore positivo','Valore attribuito totale EUR','Valori evento non definiti','Prima partecipazione','Ultima partecipazione','Completezza','Prima presenza','Ultima presenza'],people_rows,{12},{14,15,17,18}),
-        ('Partecipazioni',['ID persona','Nominativo','Evento','Data','Tipo','Stato','Valore attribuito EUR'],attendance_rows,{7},{4}),
-        ('Eventi',['ID evento','Evento','Data','Partecipanti confermati inclusi','Registrazioni incluse','Da verificare inclusi','Valore attribuito per presenza EUR'],event_rows,{7},{3}),
+        ('Partecipanti',['ID persona','Nome principale','Cognome principale','Nominativo','Email','Telefono','Eventi con presenza confermata','Registrazioni senza presenza','Da verificare','Eventi gratuiti','Eventi con valore positivo','Valore attribuito totale EUR','Valori evento non definiti','Prima partecipazione','Ultima partecipazione','Completezza','Prima presenza','Ultima presenza','Assenze confermate','Annullamenti','Stati in conflitto','Spesa riportata dalle fonti EUR'],people_rows,{12,22},{14,15,17,18}),
+        ('Partecipazioni',['ID persona','Nominativo','Evento','Data','Tipo','Stato','Valore attribuito EUR','Spesa riportata dalle fonti EUR'],attendance_rows,{7,8},{4}),
+        ('Eventi',['ID evento','Evento','Data','Partecipanti confermati inclusi','Registrazioni incluse','Da verificare inclusi','Valore attribuito per presenza EUR','Assenti inclusi','Annullati inclusi','Conflitti inclusi'],event_rows,{7},{3}),
     ]
 
 

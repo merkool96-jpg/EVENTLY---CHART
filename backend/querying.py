@@ -1,7 +1,7 @@
 """One filter contract for paginated UI, Top 50, segments and exports."""
 from copy import deepcopy
 from datetime import date,timedelta
-from pydantic import BaseModel,Field
+from pydantic import BaseModel,Field,field_validator,model_validator
 from .reporting import matches_filter
 
 class Filters(BaseModel):
@@ -19,6 +19,19 @@ class Filters(BaseModel):
     quality:str=''
     inactive_days:int|None=Field(default=None,ge=0)
 
+    @field_validator('start','end','last_before')
+    @classmethod
+    def valid_date(cls,value):
+        if value:date.fromisoformat(value)
+        return value
+
+    @model_validator(mode='after')
+    def bounds(self):
+        if self.start and self.end and self.start>self.end:raise ValueError('Periodo non valido')
+        if self.max_visits is not None and self.max_visits<self.min_visits:raise ValueError('Limiti presenze invertiti')
+        if self.max_value is not None and self.max_value<self.min_value:raise ValueError('Limiti valore invertiti')
+        return self
+
 
 def select_people(report,filters=None,q='',sort='visits',direction='desc',ranked=False):
     f=filters if isinstance(filters,Filters) else Filters(**(filters or {}))
@@ -32,6 +45,7 @@ def select_people(report,filters=None,q='',sort='visits',direction='desc',ranked
         if scoped and not visits:continue
         confirmed=[eid for eid,v in visits.items() if v['confirmed']]
         p.update(event_data=visits,visits=len(confirmed),value=sum(events[eid]['participant_value_cents'] or 0 for eid in confirmed),undefined_values=sum(events[eid]['participant_value_cents'] is None for eid in confirmed),last_seen=max((events[eid]['date'] for eid in confirmed),default=None))
+        p.update(first_seen=min((events[eid]['date'] for eid in confirmed),default=None),actual_spend=sum(v['amount'] for v in visits.values()),conflicts=sum(v['conflict'] for v in visits.values()))
         p.update({key:sum(v[state] for v in visits.values()) for key,state in [('registrations','registered'),('unknown','unknown'),('absent','absent'),('cancelled','cancelled')]})
         if ranked and not p['visits']:continue
         if p['visits']<f.min_visits or (f.max_visits is not None and p['visits']>f.max_visits):continue

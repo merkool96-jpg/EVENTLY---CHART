@@ -60,6 +60,7 @@ def canonical_profiles(c,ps,membership,members):
             values.update(first_name=edit['first_name'],last_name=edit['last_name'],name=edit['display_name'],email=edit['email'],phone=edit['phone'])
         values['aliases']=sorted(filter(None,names_by_group[gid]),key=str.casefold)
         values['profile_edited']=edit is not None
+        values['name_structure']='structured' if edit else base.get('name_structure','proposed')
         result[gid]=values
     return result
 
@@ -101,7 +102,7 @@ def recommend(options):
         suspicious=any(ch.isdigit() or ch in '@<>' for ch in cleaned)
         return (bool(p.get('profile_edited')),not suspicious,valid,cleaned==original,len(set(norm(w) for w in cleaned.split())))
     best=max(options,key=quality)
-    name=clean_repetition(best['name'])
-    first,last=(best['first_name'],best['last_name']) if best.get('profile_edited') else split_name(name)
+    name=best['name'] if best.get('profile_edited') else clean_repetition(best['name'])
+    first,last=(best['first_name'],best['last_name']) if best.get('profile_edited') else (clean_repetition(best['first_name']),clean_repetition(best['last_name'])) if best.get('name_structure')=='structured' else split_name(name)
     return {'first_name':first,'last_name':last,'display_name':name,
             'reason':'Nome e cognome riconoscibili; scelta manuale precedente valorizzata e ripetizioni consecutive rimosse.'}

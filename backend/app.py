@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import Response,JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator,ValidationError
 from .migrations import migrate, backup_database
 from .identity import groups, merge, keep_separate, split_member, candidates
 from .importing import read_sheet, records_from, apply_import, snapshot
@@ -22,6 +22,14 @@ from .profiles import canonical_profiles,save_profile,recommend
 from .exporting import export_file
 
 app = FastAPI(title='EVENTLY', version='2.0.0')
+@app.exception_handler(sqlite3.Error)
+async def storage_error(request,error):
+    return JSONResponse(status_code=500,content={'detail':'Operazione non completata. I dati sono stati conservati: riprova o controlla il backup.'})
+
+@app.exception_handler(ValidationError)
+async def filter_error(request,error):
+    return JSONResponse(status_code=422,content={'detail':'Controlla i filtri: date e limiti devono essere coerenti.'})
+
 DB = os.getenv('EVENTLY_DB', str(Path(__file__).parent / 'evently.db'))
 
 
@@ -221,8 +229,9 @@ def change_status(attendance_id:int,s:Status):
         if not row:
             raise HTTPException(404,'Registrazione non trovata')
         _,membership,members=groups(c)
+        before=next(p for p in people_report(c,True)[0] if p['id']==membership[row['person_id']])['event_data'][row['event_id']]['status']
         c.execute('INSERT INTO participation_overrides(event_id,members,status,operator,batch) VALUES(?,?,?,?,?)',(row['event_id'],json.dumps(members[membership[row['person_id']]]),s.status,'Amministratore locale','single:'+secrets.token_urlsafe(10)))
-        c.execute('INSERT INTO status_history(attendance_id,old_status,new_status) VALUES(?,?,?)',(attendance_id,row['status'],s.status))
+        c.execute('INSERT INTO status_history(attendance_id,old_status,new_status) VALUES(?,?,?)',(attendance_id,before,s.status))
     return {'ok':True}
 
 

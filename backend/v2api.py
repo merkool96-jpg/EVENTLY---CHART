@@ -59,7 +59,7 @@ def register(app,db,get_db_path,lock):
         with db() as c:return [dict(r) for r in c.execute('SELECT id,name,date FROM events WHERE date=?',(day,)) if SequenceMatcher(None,norm(name),norm(r['name'])).ratio()>=.55]
 
     @app.get('/api/v2/events/{eid}')
-    def event_workspace(eid:int,q:str='',status:str=''):
+    def event_workspace(eid:int,q:str='',status:str='',page:int=1,page_size:int=50):
         with db() as c:
             report=people_report(c,True)
             es=events_report(c,report)
@@ -69,7 +69,14 @@ def register(app,db,get_db_path,lock):
             imports=[dict(r) for r in c.execute('SELECT id,filename,status,created_at FROM imports WHERE event_id=? ORDER BY id DESC',(eid,))]
             all_analytics=analytics(c)
             analysis=next((e for e in all_analytics['events'] if e['id']==eid),{})
-            return {'event':event,'rows':people,'total':len(people),'imports':imports,'analysis':analysis,'editions':[e for e in es if e['id']!=eid and e['name'].casefold()==event['name'].casefold()]}
+            return {'event':event,'rows':people[(max(1,page)-1)*min(200,max(1,page_size)):max(1,page)*min(200,max(1,page_size))],'ids':[p['id'] for p in people],'total':len(people),'imports':imports,'analysis':analysis,'editions':[e for e in es if e['id']!=eid and e['name'].casefold()==event['name'].casefold()]}
+
+    @app.post('/api/v2/events/{eid}/archive')
+    def archive(eid:int,body:dict):
+        if type(body.get('archived')) is not bool:raise HTTPException(422,'Scegli se archiviare o rendere operativo l’evento')
+        with db(True) as c:
+            if not c.execute('UPDATE events SET archived=? WHERE id=?',(int(body['archived']),eid)).rowcount:raise HTTPException(404,'Evento non trovato')
+        return {'ok':True}
 
     @app.post('/api/v2/events/{eid}/analytics-impact')
     def impact(eid:int,body:Impact):
@@ -118,7 +125,7 @@ def register(app,db,get_db_path,lock):
                 'duplicates':[dict(r) for r in c.execute('SELECT import_id,person_id,COUNT(*) count FROM import_rows GROUP BY import_id,person_id HAVING COUNT(*)>1')],
                 'undefined_values':[dict(r) for r in c.execute('SELECT * FROM events WHERE participant_value_cents IS NULL')],
                 'import_errors':[dict(r) for r in c.execute('SELECT * FROM import_issues WHERE resolved=0')],
-                'ambiguous':candidates(c),'conflicts':[public_person(p) for p in ps if p['conflicts']]}
+                'ambiguous':candidates(c,limit=None),'conflicts':[public_person(p) for p in ps if p['conflicts']]}
             return {'counts':{k:len(v) for k,v in categories.items()},'rows':categories.get(kind,[]),'kind':kind}
 
     @app.post('/api/v2/issues/{issue_id}/resolve')
@@ -133,7 +140,7 @@ def register(app,db,get_db_path,lock):
             row=c.execute('SELECT id FROM attendance WHERE event_id=? AND person_id=?',(source['event_id'],person_id)).fetchone()
             c.execute('INSERT INTO attendance_evidence(attendance_id,status,source) VALUES(?,?,?)',(row['id'],source['status'],f'issue:{issue_id}:admin'))
             c.execute('UPDATE import_issues SET resolved=1,person_id=? WHERE id=?',(person_id,issue_id))
-            c.execute('INSERT INTO decisions(action,a,reason) VALUES(?,?,?)',('resolve_issue',person_id,f'Riga non attribuita #{issue_id} assegnata esplicitamente'))
+            c.execute('INSERT INTO decisions(action,a,reason) VALUES(?,?,?)',('resolve_issue',person_id,f'Riga non attribuita #{issue_id} assegnata esplicitamente; spesa corretta in centesimi: {amount_cents}'))
             return {'ok':True}
 
     @app.get('/api/v2/views')
@@ -157,12 +164,15 @@ def register(app,db,get_db_path,lock):
         with db(True) as c:return {'id':c.execute('INSERT INTO mapping_templates(name,headers,mapping,header_row) VALUES(?,?,?,?)',(str(body.get('name','Formato salvato'))[:100],json.dumps(body.get('headers',[])),json.dumps(mapping),int(body.get('header_row',1)))).lastrowid}
 
     @app.get('/api/v2/identity')
-    def review(deferred:bool=False):
+    def review(deferred:bool=False,page:int=1,page_size:int=25):
         from .profiles import canonical_profiles
+        from .participations import load_evidence,consolidate
         with db() as c:
             ps,membership,members=groups(c);profiles=canonical_profiles(c,ps,membership,members)
             report=people_report(c,True);reports={p['id']:p for p in report[0]}
-            rows=candidates(c,deferred=deferred)
+            evidence=load_evidence(c);overrides=[dict(r) for r in c.execute('SELECT * FROM participation_overrides WHERE active=1 ORDER BY id')]
+            all_rows=candidates(c,deferred=deferred,limit=None)
+            size=min(100,max(1,page_size));rows=all_rows[(max(1,page)-1)*size:max(1,page)*size]
             for row in rows:
                 a,b=row['a']['id'],row['b']['id'];ga,gb=membership[a],membership[b]
                 row['original_a']=row['a'];row['original_b']=row['b'];row['a']={**ps[ga],**profiles[ga]};row['b']={**ps[gb],**profiles[gb]}
@@ -174,8 +184,13 @@ def register(app,db,get_db_path,lock):
                 except HTTPException as error:row['can_merge']=False;row['conflict']=error.detail
                 finally:c.execute('ROLLBACK TO preflight');c.execute('RELEASE preflight')
                 overlaps=set(reports[ga]['event_data']) & set(reports[gb]['event_data'])
-                row['impact']={'people_change':-1,'overlapping_events':len(overlaps),'message':'Le presenze sullo stesso evento saranno consolidate una sola volta; eventuali stati contrari diventeranno conflitti.'}
-            return rows
+                combined_visits=0;combined_value=0
+                for eid in set(reports[ga]['event_data'])|set(reports[gb]['event_data']):
+                    records=reports[ga]['event_data'].get(eid,{}).get('records',[])+reports[gb]['event_data'].get(eid,{}).get('records',[])
+                    state,_,_,_=consolidate(c,eid,members[ga]+members[gb],records,evidence,overrides)
+                    if state=='confirmed':combined_visits+=1;combined_value+=report[1][eid]['participant_value_cents'] or 0
+                row['impact']={'presences_change':combined_visits-reports[ga]['visits']-reports[gb]['visits'],'value_change':combined_value-reports[ga]['value']-reports[gb]['value'],'people_change':-1,'overlapping_events':len(overlaps),'message':'Le presenze sullo stesso evento saranno consolidate una sola volta; eventuali stati contrari diventeranno conflitti.'}
+            return {'rows':rows,'total':len(all_rows),'page':max(1,page),'page_size':size}
 
     @app.post('/api/v2/identity/defer')
     def defer(body:Pair):

@@ -1,12 +1,12 @@
 {
   "name": "evently",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
-    "test:e2e": "node e2e/smoke.cjs",
+    "test:e2e": "node e2e/v2.cjs",
     "test:sorting": "node e2e/sorting.cjs",
     "test:performance": "node e2e/performance.cjs",
     "test:profiles": "node e2e/profiles-export.cjs"

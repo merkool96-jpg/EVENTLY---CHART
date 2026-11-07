@@ -84,6 +84,7 @@ const base = process.env.EVENTLY_URL || "http://127.0.0.1:8003";
       .waitFor();
     await p.getByRole("button", { name: "Chiudi", exact: true }).click();
     await p.getByRole("textbox", { name: "Cerca partecipante" }).fill("Di Gio");
+    await p.waitForFunction(() => document.querySelectorAll("tbody tr").length === 1);
     assert.equal(await p.locator("tbody tr").count(), 1);
     await p
       .getByRole("button", { name: "Esporta partecipanti", exact: true })
@@ -111,6 +112,7 @@ const base = process.env.EVENTLY_URL || "http://127.0.0.1:8003";
       (await csvDownload).suggestedFilename(),
       "EVENTLY-partecipanti.csv",
     );
+    await exp2.waitFor({ state: "hidden" });
     await p.setViewportSize({ width: 390, height: 844 });
     await p
       .getByRole("button", { name: "Esporta partecipanti", exact: true })

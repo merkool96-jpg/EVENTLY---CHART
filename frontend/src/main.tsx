@@ -21,7 +21,7 @@ import {
 import "./style.css";
 import { ImportWizard } from "./ImportWizard";
 import { MergeDialog, EditPersonDialog, ExportDialog } from "./PersonDialogs";
-import {PeoplePage,EventWorkspace,ReviewPage,QualityPage,AnalyticsPage,SettingsPage,ImportHistory} from './V2Panels';
+import {PeoplePage,EventWorkspace,ReviewPage,QualityPage,AnalyticsPage,SettingsPage,ImportHistory,states as statusLabels} from './V2Panels';
 import {
   defaultPeopleSort,
   nextPeopleSort,
@@ -188,7 +188,7 @@ function App() {
         });
     };
     const tasks = [
-      load("/matches", setMatches, "review"),
+      
       load("/identity/history", setHistory, "review"),
     ];
     if (scope === "all")
@@ -626,7 +626,7 @@ function App() {
           {(page==='Partecipanti'||page==='Top 50')&&<PeoplePage key={page+panelVersion} ranked={page==='Top 50'} onOpen={showProfile}/>}
           {page==='Importazioni'&&<ImportHistory/>}
           {page==='Community Analytics'&&<AnalyticsPage/>}
-          {page==='Qualità Dati'&&<QualityPage onOpen={showProfile} onEvent={setWorkspace}/>}
+          {page==='Qualità Dati'&&<QualityPage onOpen={showProfile} onEvent={setWorkspace} onChange={()=>{void refresh()}}/>}
           {page==='Impostazioni'&&<SettingsPage/>}
           {page==='Identità'&&<><ReviewPage key={panelVersion} onMerge={(a,b)=>setMergeTarget({a,b})} onOpen={showProfile} onChange={()=>{void refresh('review')}}/><section className="panel history-panel"><h3>Storico decisioni</h3>{history.slice(0,100).map(h=><div className="history-row" key={h.id}><div><strong>{h.action} · #{h.a}{h.b?' / #'+h.b:''}</strong><small>{h.reason} · {h.created_at} UTC</small></div>{h.action==='merge'&&h.active===1&&<button disabled={busy} onClick={()=>act(()=>api('/identity/links/'+h.link_id+'/undo',{method:'POST'}),'Unione annullata').then(()=>setPanelVersion(v=>v+1))}>Annulla unione</button>}</div>)}</section></>}
           <footer>
@@ -667,7 +667,7 @@ function App() {
                     e.preventDefault();
                     const f = new FormData(e.currentTarget);
                     const value = String(f.get("participant_value") || "");
-                    if(!edit){const possible=await api('/v2/events/similar?'+new URLSearchParams({name:String(f.get('name')),day:String(f.get('date'))}));if(possible.length&&!confirm('Esiste un evento simile nella stessa data: '+possible.map((e:any)=>e.name).join(', ')+'. Vuoi creare comunque un evento distinto?'))return;}
+                    try{if(!edit){const possible=await api('/v2/events/similar?'+new URLSearchParams({name:String(f.get('name')),day:String(f.get('date'))}));if(possible.length&&!confirm('Esiste un evento simile nella stessa data: '+possible.map((e:any)=>e.name).join(', ')+'. Vuoi creare comunque un evento distinto?'))return;}}catch(e){setError('Non è stato possibile verificare eventi già presenti. Riprova.');return;}
                     let createdId:number|undefined;
                     const ok = await act(
                       async () =>
@@ -753,6 +753,7 @@ function App() {
               </>
             ) : (
               <ImportWizard
+                onNavigate={destination=>{setModal(null);setPage(destination as typeof page);void refresh()}}
                 events={events}
                 initialEvent={target}
                 onCreate={() => {setCreatingForImport(true);openEvent()}}
@@ -773,6 +774,7 @@ function App() {
           onClose={() => setMergeTarget(null)}
           onDone={(message) => {
             setMergeTarget(null);
+            setPanelVersion(v=>v+1);
             setNotice(message);
             void refresh();
           }}
@@ -901,11 +903,7 @@ function App() {
                     {day(e.date)} · {e.location}
                   </small>
                   <span className={"status-pill " + e.status}>
-                    {e.status === "confirmed"
-                      ? "Presenza confermata"
-                      : e.status === "registered"
-                        ? "Registrazione"
-                        : "Da verificare · dato V1"}
+                    {statusLabels[e.status||'unknown']}
                   </span>
                   <small>
                     Valore attribuito:{" "}
@@ -914,31 +912,8 @@ function App() {
                       : euro(e.attributed_value || 0)}{" "}
                     · Spesa riportata: {euro(e.amount || 0)}
                   </small>
-                  {e.records?.map((record) => (
-                    <label className="status-control" key={record.id}>
-                      Stato identità #{record.person_id}
-                      <select
-                        aria-label={"Stato registrazione " + record.id}
-                        disabled={busy}
-                        value={record.status}
-                        onChange={async (ev) => {
-                          const ok = await act(
-                            () =>
-                              api(
-                                "/attendance/" + record.id,
-                                json({ status: ev.target.value }, "PATCH"),
-                              ),
-                            "Stato aggiornato",
-                          );
-                          if (ok) await showProfile(profile);
-                        }}
-                      >
-                        <option value="registered">Registrazione</option>
-                        <option value="confirmed">Presenza confermata</option>
-                        <option value="absent">Assente confermato</option><option value="cancelled">Annullato</option><option value="unknown">Da verificare</option>
-                      </select>
-                    </label>
-                  ))}
+                  {e.records?.length?<label className="status-control">Stato consolidato della partecipazione<select aria-label={'Stato partecipazione '+e.id} disabled={busy} value={e.status} onChange={async ev=>{const ok=await act(()=>api('/attendance/'+e.records![0].id,json({status:ev.target.value},'PATCH')),'Stato aggiornato');if(ok)await showProfile(profile)}}>{Object.entries(statusLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>:null}<details><summary>Registrazioni originali e fonti</summary>{e.records?.map(record=><p key={record.id}>Identità #{record.person_id} · {statusLabels[record.status]}</p>)}</details>
+
                 </div>
               </div>
             ))}

@@ -142,7 +142,7 @@ def test_5_6_7_compound_aliases_require_review_and_keep_sources(client):
     for a,b,email in [('Iside Oliveti','Iside Oliveti Oliveti','iside@test.it'),('Francesco Son','Francesco Sonnessa','francesco@test.it'),('Rebecca Lai','Rebecca Lai Musa','rebecca@test.it')]:
         result=upload(client,e,f'Nome completo,Email\n{a},{email}\n{b},{email}\n')
         assert result['automatic']==0
-    matches=client.get('/api/v2/identity').json();assert len(matches)==3
+    matches=client.get('/api/v2/identity').json()['rows'];assert len(matches)==3
     assert all(m['can_merge'] for m in matches)
     pair=next(m for m in matches if 'Iside' in m['a']['name'])
     preview=client.post('/api/matches/preview',json={'a':pair['a']['id'],'b':pair['b']['id']}).json()
@@ -178,10 +178,10 @@ def test_views_templates_defer_and_duplicate_event_warning(client):
     assert client.get('/api/v2/mapping-templates').json()[0]['name']=='Mio formato'
     upload(client,e,'Nome completo,Email\nMario Rossi,a@test.it\nMario Rosssi,a@test.it\n')
     client.post('/api/v2/identity/defer',json={'a':1,'b':2})
-    assert client.get('/api/v2/identity').json()==[]
-    assert len(client.get('/api/v2/identity?deferred=true').json())==1
+    assert client.get('/api/v2/identity').json()['rows']==[]
+    assert len(client.get('/api/v2/identity?deferred=true').json()['rows'])==1
     client.post('/api/v2/identity/resume',json={'a':1,'b':2})
-    assert len(client.get('/api/v2/identity').json())==1
+    assert len(client.get('/api/v2/identity').json()['rows'])==1
 
 
 def test_35_complete_registration_conversion_requires_known_outcomes(client):
@@ -201,3 +201,42 @@ def test_pattern_email_and_structured_double_given_name_no_false_merge(client):
     people=client.get('/api/people').json();assert {p['first_name'] for p in people}=={'Maria Anna','Maria Sara'}
     assert {p['email'] for p in people}=={'maria.anna@test.it','sara@test.it'}
     assert client.get('/api/matches').json()==[]
+
+
+def test_37_frequency_free_paid_and_export_five_states(client):
+    free=[event(client,'Gratuito '+str(i),f'2026-01-0{i+1}',0) for i in range(3)]
+    paid=event(client,'Valore positivo','2026-02-01',4000)
+    for e in free:upload(client,e,'Nome completo,Email\nFrequente Gratuita,free@test.it\n','confirmed')
+    upload(client,paid,'Nome completo,Email\nOccasionale Pagante,paid@test.it\n','confirmed')
+    upload(client,paid,'Nome completo,Email\nPersona Assente,absent@test.it\n','absent')
+    upload(client,paid,'Nome completo,Email\nPersona Annullata,cancelled@test.it\n','cancelled')
+    people=client.get('/api/v2/people?ranked=true&sort=value').json()['rows']
+    assert [p['name'] for p in people]==['Occasionale Pagante','Frequente Gratuita']
+    assert people[1]['visits']==3 and people[1]['value']==0
+    book=load_workbook(io.BytesIO(client.get('/api/exports/participants').content))
+    es=[dict(zip(list(book['Eventi'].values)[0],row)) for row in list(book['Eventi'].values)[1:]]
+    e=next(e for e in es if e['Evento']=='Valore positivo')
+    assert e['Assenti inclusi']==1 and e['Annullati inclusi']==1 and e['Da verificare inclusi']==0
+    assert client.get('/api/v2/analytics').json()['frequencies']['3']==1
+
+
+def test_38_xlsx_ten_thousand_and_one_all_three_sheets_read_only(client):
+    with module.db(True) as c:
+        c.executemany('INSERT INTO people(name,email) VALUES(?,?)',[(f'Sintetica {i}',f'fake{i}@example.test') for i in range(10001)])
+        before=c.total_changes
+    book=load_workbook(io.BytesIO(client.get('/api/exports/participants').content),read_only=True)
+    assert book.sheetnames==['Partecipanti','Partecipazioni','Eventi']
+    assert sum(1 for _ in book['Partecipanti'].values)==10002
+    with module.db() as c:assert c.execute('SELECT COUNT(*) FROM people').fetchone()[0]==10001
+
+
+def test_stale_bulk_invalid_restore_and_explicit_registration_conflict(client):
+    e=event(client)
+    upload(client,e,'Nome,Email,ID registrazione\nMario,m@test.it,REG1\n')
+    draft=client.post('/api/v2/bulk/preview',json={'event_id':e,'status':'confirmed'}).json()
+    result=upload(client,e,'Nome,Email,ID registrazione\nLuca,l@test.it,REG1\n','confirmed')
+    assert result['issue_rows']==1
+    assert client.post('/api/v2/bulk/'+draft['token']+'/confirm').status_code==409
+    assert client.post('/api/v2/restore/preview',files={'file':('bad.db',b'not sqlite')}).status_code==400
+    assert client.get('/api/dashboard').json()['attendance']==0
+    assert len(client.get('/api/people').json())==1

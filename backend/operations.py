@@ -69,7 +69,15 @@ def analytics(c,filters=None,window=90,reference=None):
     f=filters or {}
     event_rows=[e for e in event_rows if (not f.get('event_id') or e['id']==f['event_id']) and (not f.get('category') or e['category']==f['category']) and (not f.get('start') or e['date']>=f['start']) and (not f.get('end') or e['date']<=f['end'])]
     shown={e['name'] for e in event_rows};affinity=[a for a in affinity if a['a'] in shown or a['b'] in shown]
+    categories={}
+    for eid,e in events.items():
+        if e['category']:
+            categories.setdefault(e['category'],set()).update(pid for pid,ids in confirmed.items() if eid in ids)
+    category_affinity=[{'a':a,'b':b,'shared':len(categories[a]&categories[b])} for i,a in enumerate(sorted(categories)) for b in sorted(categories)[i+1:] if categories[a]&categories[b]]
+    category_affinity.sort(key=lambda row:(-row['shared'],row['a'],row['b']))
+    scoped_events=[(events[eid],v) for p in chosen for eid,v in p['event_data'].items() if v['confirmed']]
     first_date=f.get('start','')
     return {'people':len(chosen),'with_presence':sum(p['visits']>0 for p in chosen),'new':sum(p['visits']>0 and (not first_date or p['first_seen_global']>=first_date) for p in chosen),'returning':sum(p['visits']>0 and bool(first_date) and p['first_seen_global']<first_date for p in chosen),
+            'free_presences':sum(e['participant_value_cents']==0 for e,v in scoped_events),'paid_presences':sum(e['participant_value_cents'] is not None and e['participant_value_cents']>0 for e,v in scoped_events),'undefined_presences':sum(e['participant_value_cents'] is None for e,v in scoped_events),'attributed_value':sum(p['value'] for p in chosen),'first_presence':min((e['date'] for e,v in scoped_events),default=None),'last_presence':max((e['date'] for e,v in scoped_events),default=None),'category_affinity':category_affinity,
             'frequencies':{str(n):sum(p['visits']>=n for p in chosen) for n in (2,3,5,10)},'events':event_rows,'affinity':affinity,'coverage':'Solo lo storico importato è conosciuto; nessuna assenza è dedotta dai dati mancanti.',
             'inactive':{str(days):sum(p['last_seen'] is not None and p['last_seen']<=(today-timedelta(days=days)).isoformat() for p in people) for days in (30,90,180,365)}}

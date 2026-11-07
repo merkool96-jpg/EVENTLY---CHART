@@ -153,6 +153,7 @@ def apply_import(c,filename,data,config,records):
     from .profiles import canonical_profiles
     known=list(ps.values())+list(canonical_profiles(c,ps,membership,members).values())
     known_first={parts(p)[0] for p in known}
+    known_full={norm(p['name']) for p in known if full_name(p['name'])}
     known_emails={p['email'].casefold() for p in known if p['email']}
     known_phones={norm(p['phone']) for p in known if norm(p['phone'])}
     for row in c.execute('SELECT name FROM aliases'):known_first.add(parts({'name':row['name']})[0])
@@ -172,18 +173,20 @@ def apply_import(c,filename,data,config,records):
         elif key_record:
             pid=key_record['person_id'];kind='existing'
             original=c.execute('SELECT * FROM people WHERE id=?',(pid,)).fetchone()
-            if record['email'] and original['email'] and record['email']!=original['email'].casefold():
+            source_first=parts(dict(original))[0]
+            incoming_first=parts({'name':record['name'],'first_name':record.get('first_name',''),'last_name':record.get('last_name',''),'name_structure':record.get('structure','proposed')})[0]
+            if (record['email'] and original['email'] and record['email']!=original['email'].casefold()) or (source_first and incoming_first and source_first!=incoming_first) or (norm(record['phone']) and norm(original['phone']) and norm(record['phone'])!=norm(original['phone'])):
                 record['issue']='ID registrazione già attribuito a un contatto differente'
                 c.execute('INSERT INTO import_issues(import_id,row_number,original,reason) VALUES(?,?,?,?)',(iid,record['row'],json.dumps(record['original'],default=str),record['issue']))
                 summary['valid_rows']-=1;summary['issue_rows']+=1;summary['details'].append({**record,'category':'issue'});continue
         else:
             first=parts({'name':record['name'],'first_name':record.get('first_name',''),'last_name':record.get('last_name',''),'name_structure':record.get('structure','proposed')})[0]
-            if first not in known_first and not (record['email'] and record['email'] in known_emails) and not (norm(record['phone']) and norm(record['phone']) in known_phones):
+            if first not in known_first and norm(record['name']) not in known_full and not (record['email'] and record['email'] in known_emails) and not (norm(record['phone']) and norm(record['phone']) in known_phones):
                 pid=c.execute('INSERT INTO people(name,email,phone,first_name,last_name,name_structure) VALUES(?,?,?,?,?,?)',(record['name'],record['email'],record['phone'],record.get('first_name',''),record.get('last_name',''),record.get('structure','proposed'))).lastrowid
                 kind='new' if full_name(record['name']) else 'incomplete'
             else:
                 pid,kind=identify(c,record['name'],record['email'],record['phone'],record.get('first_name',''),record.get('last_name',''),record.get('structure','proposed'))
-            known_first.add(first);known_emails.add(record['email']);known_phones.add(norm(record['phone']))
+            known_first.add(first);known_full.add(norm(record['name']));known_emails.add(record['email']);known_phones.add(norm(record['phone']))
         if kind in summary:summary[kind]+=1
         if kind in ('new','incomplete','ambiguous'):summary['new_profiles']+=1
         if record.get('incomplete') and kind!='incomplete':summary['incomplete']+=1
