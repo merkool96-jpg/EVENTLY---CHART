@@ -110,7 +110,7 @@ def test_39_41_upgrade_v12_no_original_data_loss(tmp_path):
         before=c.execute('SELECT * FROM attendance').fetchall()
     migrate(path)
     with sqlite3.connect(path) as c:
-        assert c.execute('PRAGMA user_version').fetchone()[0]==4
+        assert c.execute('PRAGMA user_version').fetchone()[0]==5
         assert c.execute('SELECT * FROM attendance').fetchall()==before
         assert c.execute('SELECT COUNT(*) FROM attendance_evidence').fetchone()[0]==1
         assert c.execute('PRAGMA foreign_key_check').fetchall()==[]

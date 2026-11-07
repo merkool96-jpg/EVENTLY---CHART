@@ -247,7 +247,7 @@ def register(app,db,get_db_path,lock):
         folder=Path(tempfile.mkdtemp(prefix='evently-restore-'));path=folder/'candidate.db';path.write_bytes(content);path.chmod(0o600)
         try:
             with sqlite3.connect(path) as c:
-                if c.execute('PRAGMA integrity_check').fetchone()[0]!='ok' or c.execute('PRAGMA user_version').fetchone()[0]>4:raise ValueError()
+                if c.execute('PRAGMA integrity_check').fetchone()[0]!='ok' or c.execute('PRAGMA user_version').fetchone()[0]>5:raise ValueError()
                 for table in ('people','events','attendance'):c.execute(f'SELECT COUNT(*) FROM {table}')
             migrate(path)
             with sqlite3.connect(path) as c:
@@ -260,7 +260,7 @@ def register(app,db,get_db_path,lock):
             from .backup_info import database_counts
             current_counts=database_counts(c)
             c.execute('INSERT INTO restore_drafts VALUES(?,?,?,?)',(token,str(path),sha,int(time.time())))
-        return {'token':token,'counts':counts,'current_counts':current_counts,'schema_version':4,'message':'Copia temporanea verificata. Confermare sostituirà il database corrente dopo averlo salvato.'}
+        return {'token':token,'counts':counts,'current_counts':current_counts,'schema_version':5,'message':'Copia temporanea verificata. Confermare sostituirà il database corrente dopo averlo salvato.'}
 
     @app.post('/api/v2/restore/{token}/confirm')
     def restore_confirm(token:str):

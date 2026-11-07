@@ -87,7 +87,7 @@ def test_backup_metadata_and_preview_comparison(client):
     client.post('/api/events',json={'name':'Sintetico','date':'2026-01-01'})
     backup=client.post('/api/backup').json()['file']
     metadata=next(r for r in client.get('/api/v2/backups').json() if r['name']==backup)
-    assert metadata['verified'] and metadata['schema_version']==4 and metadata['counts']['events']==1
+    assert metadata['verified'] and metadata['schema_version']==5 and metadata['counts']['events']==1
     blob=client.get('/api/v2/backups/'+backup).content
     client.post('/api/events',json={'name':'Secondo','date':'2026-02-01'})
     draft=client.post('/api/v2/restore/preview',files={'file':('backup.db',blob)}).json()

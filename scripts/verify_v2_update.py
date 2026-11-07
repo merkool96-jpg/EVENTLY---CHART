@@ -53,7 +53,7 @@ assert c.get('/api/v2/people').json()['total']==2
 '''
         subprocess.run([sys.executable,'-c',launch],cwd=target,env=env,check=True,capture_output=True)
         with sqlite3.connect(database) as c:
-            assert c.execute('PRAGMA user_version').fetchone()[0]==4
+            assert c.execute('PRAGMA user_version').fetchone()[0]==5
             assert c.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
             assert c.execute('PRAGMA foreign_key_check').fetchall()==[]
             for table,data in before.items():
@@ -63,7 +63,7 @@ assert c.get('/api/v2/people').json()['total']==2
         backups=list((target/'backend/backups').glob('*.db'))
         assert backups
         with sqlite3.connect(backups[0]) as c:assert c.execute('PRAGMA user_version').fetchone()[0]==previous_schema
-        print(json.dumps({'base':args.base,'schema_before':previous_schema,'schema_after':4,'legacy_tables_preserved':list(before),'database_backup_verified':True,'code_backup_verified':True,'scope':'temporary synthetic installation only'},indent=2))
+        print(json.dumps({'base':args.base,'schema_before':previous_schema,'schema_after':5,'legacy_tables_preserved':list(before),'database_backup_verified':True,'code_backup_verified':True,'scope':'temporary synthetic installation only'},indent=2))
 
 
 if __name__=='__main__':main()

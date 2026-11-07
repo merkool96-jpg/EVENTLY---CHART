@@ -26,7 +26,18 @@ def backup_database(path):
     return target
 
 
-def migrate(path,target_version=4):
+def migrate(path,target_version=5):
+    if target_version==5:
+        with sqlite3.connect(path) as c:
+            current=c.execute('PRAGMA user_version').fetchone()[0]
+            existing=c.execute("SELECT 1 FROM sqlite_master WHERE name='people'").fetchone()
+        if current>5:raise ValueError('Database più recente: usare una versione compatibile')
+        if current==5:return
+        if current<4:migrate(path,target_version=4)
+        elif existing:backup_database(path)
+        from .crm_migration import upgrade_crm
+        upgrade_crm(path)
+        return
     with sqlite3.connect(path) as c:
         version = c.execute('PRAGMA user_version').fetchone()[0]
         existing = c.execute("SELECT 1 FROM sqlite_master WHERE name='people'").fetchone()
