@@ -455,53 +455,7 @@ function App() {
                 ))}
               </div>
               <div className="dashboard-grid">
-                <div className="overview-charts">
-                <section className="panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h3>Il valore degli incontri</h3>
-                      <p>Valore convenzionale × presenze confermate</p>
-                    </div>
-                    <span className="tag">Tutti gli eventi</span>
-                  </div>
-                  <div className="chart">
-                    {stats.timeline.length ? (
-                      stats.timeline.map((e) => (
-                        <div className="bar-column" key={e.id}>
-                          <span>
-                            {e.attributed_value === null
-                              ? "Non definito"
-                              : euro(e.attributed_value)}
-                          </span>
-                          <div
-                            className="bar"
-                            style={{
-                              height: `${Math.max(4, ((e.attributed_value || 0) / Math.max(...stats.timeline.map((x) => x.attributed_value || 0), 1)) * 160)}px`,
-                            }}
-                          />
-                          <small>
-                            {new Date(e.date).toLocaleDateString("it-IT", {
-                              month: "short",
-                            })}
-                          </small>
-                        </div>
-                      ))
-                    ) : (
-                      <Empty text="Il tuo prossimo evento è l’inizio di una bella storia." />
-                    )}
-                  </div>
-                  <div className="chart-footer">
-                    <span>
-                      <i /> Valore attribuito
-                    </span>
-                    <span>
-                      Spesa riportata{" "}
-                      <strong>{euro(stats.actual_spend)}</strong>
-                    </span>
-                  </div>
-                </section>
-                <ParticipantsChart events={stats.timeline}/>
-                </div>
+                <ParticipantsChart events={stats.timeline} actualSpend={stats.actual_spend}/>
                 <section className="panel spotlight">
                   <span className="tag">PERSONE CHE FANNO LA DIFFERENZA</span>
                   <Trophy size={31} />

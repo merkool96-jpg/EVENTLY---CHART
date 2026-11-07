@@ -1328,3 +1328,10 @@ nav button {
 @media(max-width:700px){.attendance-panel .panel-heading{align-items:start;gap:8px}.attendance-panel .chart-footer{gap:10px;flex-wrap:wrap}}
 .overview-charts>.panel{min-width:0}
 .overview-charts .panel-heading{flex-wrap:wrap;gap:10px}
+
+.chart-mode-switch{display:flex;gap:4px;padding:4px;background:#f0f5ef;border:1px solid #dfe8dc;border-radius:10px;flex-wrap:wrap}
+.chart-mode-switch button{border:0;background:transparent;padding:8px 12px;border-radius:7px;color:#526b55;font-weight:600}
+.chart-mode-switch button[aria-pressed="true"]{background:#2f654b;color:white;box-shadow:0 2px 4px #244a2720}
+.chart-mode-switch button:focus-visible{outline:2px solid #2f654b;outline-offset:3px}
+.attendance-panel{min-width:0}
+.attendance-panel .panel-heading{flex-wrap:wrap;gap:12px}

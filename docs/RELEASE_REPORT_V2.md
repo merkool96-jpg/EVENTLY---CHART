@@ -78,3 +78,9 @@ Seguire i cinque passaggi nel README con **AGGIORNA_EVENTLY.command dalla nuova 
 ## Aggiornamento grafico Overview — 7 novembre 2026
 
 Aggiunto secondo grafico indipendente dal valore economico: partecipanti confermati per evento, valori zero espliciti, nome/data con anno, totale delle presenze e tabella espandibile. Usa `dashboard.timeline[].participants` dal read-model consolidato esistente; nessuna modifica a DB/API o ai dati caricati. Grafico e tabella mostrano lo stesso insieme di eventi incluso nelle analisi. Build passata; suite Chromium `test:charts` su dati sintetici3/10/0, gratuito vs economico, totale13, vuoto, tabella e viewport390 senza overflow. Nessun dato personale usato nelle prove.
+
+## Correzione V2.0.1 — grafico selezionabile e cartella in uso
+
+Sostituita la doppia scheda con un solo grafico e pulsanti Economics/Partecipanti (aria-pressed, tastiera, medesima area). Etichette, scala, legenda e tabella cambiano insieme; zero e valore non definito distinti. Verificato nel browser il passaggio in entrambe le direzioni, una sola area grafico, tabella coerente, vuoto e viewport390. Aggiunta versione riconoscibile in Impostazioni.
+
+TROVA_EVENTLY.command usa i PID del server locale sulle porte standard, verifica backend.app:app e cartella applicativa e apre il Finder sul launcher corretto. Non scansiona cartelle personali né apre database; rifiuta ambiguità. Tre test simulati, più tutte le regressioni:91 passati. Finder reale non disponibile nel Linux di collaudo. Corretto il numero di versione run-parallel nel lockfile per allinearlo all'archivio1.2.0 già usato e alla sua integrità; nessuna nuova dipendenza.

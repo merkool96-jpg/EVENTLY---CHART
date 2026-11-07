@@ -21,7 +21,7 @@ from .reporting import people_report, events_report, public_person, matches_filt
 from .profiles import canonical_profiles,save_profile,recommend
 from .exporting import export_file
 
-app = FastAPI(title='EVENTLY', version='2.0.0')
+app = FastAPI(title='EVENTLY', version='2.0.1')
 @app.exception_handler(sqlite3.Error)
 async def storage_error(request,error):
     return JSONResponse(status_code=500,content={'detail':'Operazione non completata. I dati sono stati conservati: riprova o controlla il backup.'})
@@ -104,7 +104,7 @@ def active_event(c,eid):
 def health():
     with db() as c:
         version=c.execute('PRAGMA user_version').fetchone()[0]
-    return {'status':'ok','schema_version':version,'version':'2.0.0'}
+    return {'status':'ok','schema_version':version,'version':'2.0.1'}
 
 
 @app.post('/api/backup')

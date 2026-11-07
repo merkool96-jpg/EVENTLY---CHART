@@ -1,5 +1,5 @@
 {
-  "release": "evently-v2.0.0",
+  "release": "evently-v2.0.1",
   "files": {
     ".github/workflows/ci.yml": {
       "sha256": "43a8c7497adf8494c9d44b1338715cfa1646bd9f303aa8bc88e5a7369d711b53",
@@ -22,11 +22,15 @@
       "executable": false
     },
     "README.md": {
-      "sha256": "3008035cffe8354cec26e296e86c805afd88150981b4e5de6798e8909956e0e1",
+      "sha256": "5ab1570e1630db430bc1325016c989f0784ff236de09db040e87fe2ba4e9fbb2",
       "executable": false
     },
+    "TROVA_EVENTLY.command": {
+      "sha256": "93e6c9c84bfe68190197bdba4f8a15450d13c6d8e248cf20dd9fcd96d1d856e9",
+      "executable": true
+    },
     "backend/app.py": {
-      "sha256": "c2ac83a61cead351c8345d5328b3bd1803b7c1ceaf1a86f3aa1f3ff7ad9757a0",
+      "sha256": "687ad71dd5cdf5545b8db1faa9b063d8538f9bd0a23d59efd79706b85ffc4b40",
       "executable": false
     },
     "backend/backup.py": {
@@ -79,6 +83,10 @@
     },
     "backend/tests/test_app.py": {
       "sha256": "51d2dfb1419d0a4109cfdac43c58cec6b0bfea7446deb7df27340b417b723d5a",
+      "executable": false
+    },
+    "backend/tests/test_find_installation.py": {
+      "sha256": "e3e32908beb05a5ba78b1efe5f0871dc29670b48f09ab475af332033a0a948fa",
       "executable": false
     },
     "backend/tests/test_identity_evidence.py": {
@@ -138,7 +146,7 @@
       "executable": false
     },
     "docs/RELEASE_REPORT_V2.md": {
-      "sha256": "c7e54088d7f90c532851a24ac425e2ae0409e1f4111e43142b6ba5a430603460",
+      "sha256": "004f87984d9f0abc6e1e984fb4a391b3536f78acaf595828e13e068dcf7bf3b8",
       "executable": false
     },
     "docs/RELEASE_V1.2.md": {
@@ -154,7 +162,7 @@
       "executable": false
     },
     "frontend/e2e/attendance-chart.cjs": {
-      "sha256": "a4b4d8d3cb2d21b1fe3622213ef3515006b7b074c12d2c0d826d0991e0de6531",
+      "sha256": "464dc3fb121af5aeba47e5fb79029b92479b88fe0e437f2df6bfa1fa670b6008",
       "executable": false
     },
     "frontend/e2e/performance.cjs": {
@@ -182,11 +190,11 @@
       "executable": false
     },
     "frontend/package-lock.json": {
-      "sha256": "d4a927ac908ddf8425d41fe36c0e0342d75046276f6bcdf28990f82cbfdfdcd0",
+      "sha256": "b42bbb0c5c4184c1001d0135a6829aba5d2c05649cd1eead155b24e94d2323aa",
       "executable": false
     },
     "frontend/package.json": {
-      "sha256": "851e24a13141e17f664f8c04d6a865cc12234405cc55b0086646416e49e18bfe",
+      "sha256": "b5ef33ae3fc3dd123dafa176bcefc237c49dd903bea48a0077c2b5828830ee46",
       "executable": false
     },
     "frontend/postcss.config.js": {
@@ -202,7 +210,7 @@
       "executable": false
     },
     "frontend/src/ParticipantsChart.tsx": {
-      "sha256": "5cb43847f3319d28ed3f491f827c2ae9a807ebb556259a16c7a220b8021fdb26",
+      "sha256": "0acc9ddd02999ac0deed1c5bdee21a1b22b8e65d1d1001bc9fb9777896c47c8a",
       "executable": false
     },
     "frontend/src/PersonDialogs.tsx": {
@@ -210,11 +218,11 @@
       "executable": false
     },
     "frontend/src/V2Panels.tsx": {
-      "sha256": "7b468b3708f218bbd60f17fd4e7e4f451acbe4365c68049fe0408be9047c867a",
+      "sha256": "49f190ba5371340428fdfac7853fbdc7ba2ab128c6a15c9e03e90ff0b2b248f7",
       "executable": false
     },
     "frontend/src/main.tsx": {
-      "sha256": "5d15626ef6538a08095b5e9cda1b244648b1a3dde42275130a8719492533e781",
+      "sha256": "2829e9c13bd18aaa11aa89c20dd58c5053f0685974c85a5575e5c6812be822f5",
       "executable": false
     },
     "frontend/src/peopleSorting.ts": {
@@ -222,7 +230,7 @@
       "executable": false
     },
     "frontend/src/style.css": {
-      "sha256": "f773a3ad6d4721f773d3991189983a81e0755e4d60cad0b95354512c3b4e3bd2",
+      "sha256": "0bb3d9f41d266e66f5206872d43eeb63e5cdac12b4e70d7ca6a73ad2808176f3",
       "executable": false
     },
     "frontend/tailwind.config.js": {
@@ -246,7 +254,11 @@
       "executable": false
     },
     "scripts/build_update_manifest.py": {
-      "sha256": "5bac905a8a0e8a3d421cd7a5a67d2025bbe6d22ba6dad389ab5f2ab8be32eec7",
+      "sha256": "08c1a05e27cc738320c266ab4828e1c467571b722829f98d99961ae6f5238f24",
+      "executable": false
+    },
+    "scripts/find_installation.py": {
+      "sha256": "7c9789e3f54de12b0cad6b6ac9959b0d52b58d0fc4de2940d9330cfe43b6d6a1",
       "executable": false
     },
     "scripts/install.sh": {

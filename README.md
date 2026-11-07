@@ -14,7 +14,13 @@ Non spostare il database e non sostituire manualmente la vecchia cartella. Il co
 
 Prerequisiti: Python 3.12+ e Node.js LTS22+ con npm. Per una nuova installazione, apri direttamente AVVIA_EVENTLY.command. Non avviare due copie contemporaneamente.
 
-In **Overview**, oltre al valore economico trovi **I partecipanti agli incontri**: presenti confermati per evento, anche gratuito, con nomi/date e tabella dei conteggi. Ogni persona conta una volta per evento; le iscrizioni senza presenza restano escluse.
+In **Overview** c'è un solo grafico con due pulsanti: **Economics** mostra il valore attribuito, **Partecipanti** mostra i presenti confermati per evento. Non aggiunge una seconda scheda. Versione riconoscibile in Impostazioni: **V2.0.1 · grafico Economics / Partecipanti**.
+
+### Se hai tante cartelle EVENTLY
+
+Lascia aperta la copia che mostra i tuoi dati. Dal pacchetto nuovo apri **TROVA_EVENTLY.command**: individua il server locale sulle porte abituali e apre il Finder evidenziando AVVIA_EVENTLY.command nella cartella in uso, senza aprire o modificare il database. Se trova più copie o nessuna, non ne sceglie una arbitrariamente. Mantieni aperto quel Finder. Crea un alias di AVVIA_EVENTLY.command (clic destro → Crea alias), sposta **solo l'alias** sulla Scrivania e chiamalo EVENTLY: da allora avvia sempre quello. Non spostare né rinominare la cartella applicativa o il database.
+
+Poi ferma il server con Ctrl+C nel suo Terminale e lancia AGGIORNA_EVENTLY.command dal pacchetto nuovo, scegliendo **la cartella appena individuata**, non quella del download. Riapri dall'alias; nel browser premi Cmd+Maiusc+R e controlla i due pulsanti sopra il grafico. Non serve reimportare file o ripristinare nuovamente il database. Il rilevatore è collaudato con processi simulati; l'apertura fisica del Finder richiede il Mac.
 
 ## Percorsi da provare
 
