@@ -280,10 +280,12 @@ export function EditPersonDialog({
 }
 export function ExportDialog({
   query,
+  filters = {},
   onClose,
   onDone,
 }: {
   query: string;
+  filters?:Record<string,unknown>;
   onClose: () => void;
   onDone: (message: string) => void;
 }) {
@@ -293,11 +295,12 @@ export function ExportDialog({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const q = scope === "filtered" ? query : "";
+  const filterQuery=scope==="filtered"?JSON.stringify(filters):"{}";
   useEffect(() => {
     let alive = true;
     setCount(null);
     setError("");
-    request("/exports/count?q=" + encodeURIComponent(q))
+    request("/exports/count?q=" + encodeURIComponent(q)+"&filters="+encodeURIComponent(filterQuery))
       .then((d) => {
         if (alive) setCount(d.count);
       })
@@ -307,7 +310,7 @@ export function ExportDialog({
     return () => {
       alive = false;
     };
-  }, [q]);
+  }, [q,filterQuery]);
   return (
     <Frame title="Esporta partecipanti" onClose={onClose}>
       <p>

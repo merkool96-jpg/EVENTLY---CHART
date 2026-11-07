@@ -21,6 +21,7 @@ import {
 import "./style.css";
 import { ImportWizard } from "./ImportWizard";
 import { MergeDialog, EditPersonDialog, ExportDialog } from "./PersonDialogs";
+import {PeoplePage,EventWorkspace,ReviewPage,QualityPage,AnalyticsPage,SettingsPage,ImportHistory} from './V2Panels';
 import {
   defaultPeopleSort,
   nextPeopleSort,
@@ -53,6 +54,9 @@ type Event = {
   name: string;
   date: string;
   location: string;
+  category:string;
+  edition:string;
+  archived:number;
   cost: number;
   participant_value_cents: number | null;
   participants: number;
@@ -88,6 +92,9 @@ type Stats = {
   attributed_value: number;
   undefined_events: number;
   actual_spend: number;
+  category:string;
+  edition:string;
+  archived:number;
   cost: number;
   attendance: number;
   registrations: number;
@@ -129,6 +136,10 @@ const json = (body: unknown, method = "POST") => ({
   body: JSON.stringify(body),
 });
 function App() {
+  const [creatingForImport,setCreatingForImport]=useState(false);
+  const [workspace,setWorkspace]=useState<number|null>(null);
+  const [showArchived,setShowArchived]=useState(false);
+  const [panelVersion,setPanelVersion]=useState(0);
   const [mergeTarget, setMergeTarget] = useState<{
     a: number;
     b: number;
@@ -182,8 +193,8 @@ function App() {
     ];
     if (scope === "all")
       tasks.push(
-        load("/people", setPeople, "data"),
-        load("/events", setEvents, "data"),
+        load("/people?limit=3", setPeople, "data"),
+        load("/events?include_archived=true", setEvents, "data"),
         load("/dashboard", setStats, "data"),
         load("/imports", setImports, "data"),
       );
@@ -271,9 +282,13 @@ function App() {
   const nav = [
     { icon: LayoutDashboard, label: "Dashboard" },
     { icon: CalendarDays, label: "Eventi" },
+    {icon:Upload,label:"Importazioni"},
     { icon: Users, label: "Partecipanti" },
     { icon: Trophy, label: "Top 50" },
     { icon: GitMerge, label: "Identità" },
+    {icon:Sparkles,label:"Community Analytics"},
+    {icon:Check,label:"Qualità Dati"},
+    {icon:Users,label:"Impostazioni"},
   ];
   return (
     <div className="shell">
@@ -304,7 +319,7 @@ function App() {
               }}
             >
               <I size={19} />
-              <span>{label}</span>
+              <span>{label==="Dashboard"?"Overview":label==="Identità"?"Centro Verifica":label}</span>
               {label === "Identità" && matches.length > 0 && (
                 <b>{matches.length}</b>
               )}
@@ -532,7 +547,7 @@ function App() {
                     key={e.id}
                     event={e}
                     index={i}
-                    onEdit={() => openEvent(e)}
+                    onEdit={() => setWorkspace(e.id)}
                   />
                 ))}
               </div>
@@ -559,18 +574,18 @@ function App() {
           {page === "Eventi" && (
             <>
               <div className="toolbar">
-                <span>{events.length} eventi nel tuo calendario</span>
+                <span>{events.length} eventi nello storico <button className="text-button" onClick={()=>setShowArchived(!showArchived)}>{showArchived?"Mostra operativi":"Mostra archivio"}</button></span>
                 <button className="primary" onClick={() => openEvent()}>
                   <Plus size={16} /> Nuovo evento
                 </button>
               </div>
               <div className="event-grid">
-                {events.map((e, i) => (
+                {events.filter(e=>showArchived?e.archived:!e.archived).map((e, i) => (
                   <div key={e.id}>
                     <EventCard
                       event={e}
                       index={i}
-                      onEdit={() => openEvent(e)}
+                      onEdit={() => setWorkspace(e.id)}
                     />
                     <div className="event-actions">
                       <button
@@ -608,314 +623,12 @@ function App() {
               {!events.length && <Empty text="Crea un evento per iniziare." />}
             </>
           )}
-          {page === "Top 50" && (
-            <div className="podium">
-              {rankedPeople.slice(0, 3).map((p, i) => (
-                <button
-                  key={p.id}
-                  className="panel podium-card"
-                  onClick={() => showProfile(p)}
-                >
-                  <span className="rank-number">0{i + 1}</span>
-                  <span className="avatar">{initials(p.name)}</span>
-                  <h3>{p.name}</h3>
-                  <strong>{p.visits} presenze</strong>
-                  <small>
-                    {p.last_seen ? day(p.last_seen) : "—"} · {euro(p.value)}{" "}
-                    attribuiti
-                  </small>
-                </button>
-              ))}
-            </div>
-          )}
-          {(page === "Partecipanti" || page === "Top 50") && (
-            <section className="panel">
-              <div className="table-toolbar">
-                <div>
-                  <h3>
-                    {page === "Top 50"
-                      ? "La classifica del tuo network"
-                      : "Tutte le persone"}
-                  </h3>
-                  <p>
-                    {tablePeople.length} profili · {sortLabels[peopleSort.key]}{" "}
-                    {peopleSort.direction === "asc"
-                      ? "↑ crescente"
-                      : "↓ decrescente"}
-                    {page === "Top 50"
-                      ? " · prime 50 ricalcolate sulla colonna scelta"
-                      : ""}
-                  </p>
-                </div>
-                <div className="search">
-                  <Search size={16} />
-                  <input
-                    aria-label="Cerca partecipante"
-                    placeholder="Cerca nome o email…"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-              {page === "Partecipanti" && (
-                <div className="export-toolbar">
-                  <button
-                    className="primary"
-                    onClick={() => setExportOpen(true)}
-                  >
-                    Esporta partecipanti
-                  </button>
-                  <span>Elenco completo o ricerca attiva · XLSX / CSV</span>
-                </div>
-              )}
-              <div className="sort-toolbar">
-                <span>
-                  Clicca una colonna per ordinare; clicca di nuovo per
-                  invertire.
-                </span>
-                <button
-                  className="text-button"
-                  onClick={() => setPeopleSort(defaultPeopleSort)}
-                >
-                  Ripristina classifica per presenze
-                </button>
-              </div>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      {sortHeader("name", "Partecipante")}
-                      <th
-                        aria-sort={
-                          ["visits", "registrations"].includes(peopleSort.key)
-                            ? peopleSort.direction === "asc"
-                              ? "ascending"
-                              : "descending"
-                            : "none"
-                        }
-                      >
-                        <div className="split-sort">
-                          {sortButton("visits", "Presenze")}
-                          <span>/</span>
-                          {sortButton("registrations", "Registrazioni")}
-                        </div>
-                      </th>
-                      {sortHeader("value", "Valore attribuito")}
-                      {sortHeader("last_seen", "Ultimo incontro")}
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered
-                      .filter((p) => page !== "Top 50" || p.visits > 0)
-                      .slice(0, page === "Top 50" ? 50 : 10000)
-                      .map((p, i) => (
-                        <tr
-                          key={p.id}
-                          onClick={() => showProfile(p)}
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") void showProfile(p);
-                          }}
-                        >
-                          <td>{i + 1}</td>
-                          <td>
-                            <div className="person-cell">
-                              <span className={"avatar tone-" + (i % 4)}>
-                                {initials(p.name)}
-                              </span>
-                              <div>
-                                <strong>{p.name}</strong>
-                                {p.incomplete && (
-                                  <small>Profilo incompleto</small>
-                                )}
-                                <small>
-                                  {p.email || "Email non disponibile"}
-                                </small>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="tag">{p.visits} presenze</span>
-                            <small>
-                              {p.registrations} registrazioni · {p.unknown} da
-                              verificare
-                            </small>
-                          </td>
-                          <td>
-                            <strong>{euro(p.value)}</strong>
-                            {p.undefined_values > 0 && (
-                              <small>
-                                {p.undefined_values} valori non definiti
-                              </small>
-                            )}
-                          </td>
-                          <td>{p.last_seen ? day(p.last_seen) : "—"}</td>
-                          <td>
-                            <ChevronRight size={16} />
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-              {!filtered.filter((p) => page !== "Top 50" || p.visits > 0)
-                .length && (
-                <Empty
-                  text={
-                    page === "Top 50"
-                      ? "Nessuna presenza confermata. Le semplici registrazioni non entrano in classifica."
-                      : "Nessun partecipante trovato."
-                  }
-                />
-              )}
-            </section>
-          )}
-          {page === "Identità" && (
-            <>
-              <div className="info-banner">
-                <GitMerge size={22} />
-                <div>
-                  <strong>
-                    Tu conosci le persone. EVENTLY trova le somiglianze.
-                  </strong>
-                  <p>
-                    Le unioni automatiche e manuali sono reversibili. Le
-                    decisioni MANTIENI SEPARATI valgono per tutti i membri dei
-                    gruppi e bloccano nuove unioni in conflitto.
-                  </p>
-                </div>
-              </div>
-              {matches.map((m) => (
-                <section key={m.a.id + "-" + m.b.id} className="panel match">
-                  <div className="match-top">
-                    <span className="tag">
-                      Da verificare · evidenza specifica
-                    </span>
-                    <span>{m.reason}</span>
-                  </div>
-                  <div className="match-people">
-                    {[m.a, m.b].map((p) => (
-                      <div key={p.id}>
-                        <span className="avatar">{initials(p.name)}</span>
-                        <h3>{p.name}</h3>
-                        <p>{p.email || "Nessuna email"}</p>
-                        <small>{p.phone || "Nessun telefono"}</small>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="match-actions">
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        act(
-                          () =>
-                            api(
-                              "/matches/decision",
-                              json({
-                                a: m.a.id,
-                                b: m.b.id,
-                                action: "separate",
-                              }),
-                            ),
-                          "Identità mantenute separate",
-                          "review",
-                        )
-                      }
-                    >
-                      Mantieni separati
-                    </button>
-                    <button
-                      disabled={busy}
-                      className="primary"
-                      onClick={() => setMergeTarget({ a: m.a.id, b: m.b.id })}
-                    >
-                      <GitMerge size={16} /> Unisci
-                    </button>
-                  </div>
-                </section>
-              ))}
-              {!matches.length && (
-                <section className="panel empty">
-                  <Check size={30} />
-                  <h3>Nessuna ambiguità da verificare</h3>
-                  <p>Nessuna identità simile da verificare.</p>
-                </section>
-              )}
-              <section className="panel history-panel">
-                <h3>Storico decisioni</h3>
-                <p>
-                  Le unioni precedenti alla V1.1 non sono ricostruibili senza
-                  una fonte o un backup. Gli alias legacy non equivalgono a
-                  registrazioni originali.
-                </p>
-                {history.length ? (
-                  history.slice(0, 100).map((h) => (
-                    <div className="history-row" key={h.id}>
-                      <div>
-                        <strong>
-                          {h.action === "merge"
-                            ? "Unione"
-                            : h.action === "undo"
-                              ? "Annullamento"
-                              : h.action === "override_automatic_exclusion"
-                                ? "Superamento esclusione automatica"
-                                : h.action === "split"
-                                  ? "Separazione"
-                                  : "Mantieni separati"}{" "}
-                          · #{h.a}
-                          {h.b ? " / #" + h.b : ""}
-                        </strong>
-                        <small>
-                          {h.reason} · {h.created_at} UTC
-                        </small>
-                      </div>
-                      {h.action === "merge" && h.active === 1 && (
-                        <button
-                          className="text-button"
-                          disabled={busy}
-                          onClick={() =>
-                            act(
-                              () =>
-                                api("/identity/links/" + h.link_id + "/undo", {
-                                  method: "POST",
-                                }),
-                              "Unione annullata. Classifica aggiornata.",
-                            )
-                          }
-                        >
-                          Annulla unione
-                        </button>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <Empty text="Le prossime decisioni saranno registrate qui." />
-                )}
-              </section>
-              <section className="panel history-panel">
-                <h3>Importazioni e fonti originali</h3>
-                {imports.map((i) => (
-                  <div className="history-row" key={i.id}>
-                    <div>
-                      <strong>{i.filename}</strong>
-                      <small>
-                        {i.sheet} ·{" "}
-                        {i.status === "confirmed"
-                          ? "Presenze"
-                          : "Registrazioni"}{" "}
-                        · {i.created_at} UTC
-                      </small>
-                    </div>
-                    <a href={"/api/imports/" + i.id + "/original"} download>
-                      Scarica originale
-                    </a>
-                  </div>
-                ))}
-              </section>
-            </>
-          )}
+          {(page==='Partecipanti'||page==='Top 50')&&<PeoplePage key={page+panelVersion} ranked={page==='Top 50'} onOpen={showProfile}/>}
+          {page==='Importazioni'&&<ImportHistory/>}
+          {page==='Community Analytics'&&<AnalyticsPage/>}
+          {page==='Qualità Dati'&&<QualityPage onOpen={showProfile} onEvent={setWorkspace}/>}
+          {page==='Impostazioni'&&<SettingsPage/>}
+          {page==='Identità'&&<><ReviewPage key={panelVersion} onMerge={(a,b)=>setMergeTarget({a,b})} onOpen={showProfile} onChange={()=>{void refresh('review')}}/><section className="panel history-panel"><h3>Storico decisioni</h3>{history.slice(0,100).map(h=><div className="history-row" key={h.id}><div><strong>{h.action} · #{h.a}{h.b?' / #'+h.b:''}</strong><small>{h.reason} · {h.created_at} UTC</small></div>{h.action==='merge'&&h.active===1&&<button disabled={busy} onClick={()=>act(()=>api('/identity/links/'+h.link_id+'/undo',{method:'POST'}),'Unione annullata').then(()=>setPanelVersion(v=>v+1))}>Annulla unione</button>}</div>)}</section></>}
           <footer>
             EVENTLY <span>Fatto per connettere. Progettato per durare.</span>
             <span>100% locale · Nessun servizio a pagamento</span>
@@ -954,15 +667,18 @@ function App() {
                     e.preventDefault();
                     const f = new FormData(e.currentTarget);
                     const value = String(f.get("participant_value") || "");
+                    if(!edit){const possible=await api('/v2/events/similar?'+new URLSearchParams({name:String(f.get('name')),day:String(f.get('date'))}));if(possible.length&&!confirm('Esiste un evento simile nella stessa data: '+possible.map((e:any)=>e.name).join(', ')+'. Vuoi creare comunque un evento distinto?'))return;}
+                    let createdId:number|undefined;
                     const ok = await act(
-                      () =>
-                        api(
+                      async () =>
+                        {const result=await api(
                           "/events" + (edit ? "/" + edit.id : ""),
                           json(
                             {
                               name: f.get("name"),
                               date: f.get("date"),
                               location: f.get("location"),
+                          category:f.get("category"),edition:f.get("edition"),registration_complete:f.get("registration_complete")==="on",
                               cost: Math.round(Number(f.get("cost")) * 100),
                               participant_value_cents:
                                 value === ""
@@ -971,10 +687,10 @@ function App() {
                             },
                             edit ? "PUT" : "POST",
                           ),
-                        ),
+                        );createdId=result.id;return result;},
                       "Evento salvato. Valori attribuiti ricalcolati.",
                     );
-                    if (ok) setModal(null);
+                    if(ok){if(creatingForImport){setCreatingForImport(false);if(createdId)setTarget(String(createdId));setModal("import")}else setModal(null)}
                   }}
                 >
                   <label>
@@ -999,6 +715,7 @@ function App() {
                     Luogo
                     <input name="location" defaultValue={edit?.location} />
                   </label>
+                  <label>Categoria<input name="category" defaultValue={edit?.category}/></label><label>Edizione / riferimento<input name="edition" defaultValue={edit?.edition}/></label><label className="checkbox-label"><input type="checkbox" name="registration_complete" defaultChecked={Boolean((edit as any)?.registration_complete)}/> Attesto che l'elenco iscritti di questo evento è completo</label><p className="hint">Eventi simili nella stessa data: {events.filter(e=>e.date===edit?.date&&e.id!==edit?.id).map(e=>e.name).join(', ')||'controlla nome e data prima di creare una nuova edizione'}</p>
                   <label>
                     Valore per presenza confermata (€)
                     <input
@@ -1038,7 +755,7 @@ function App() {
               <ImportWizard
                 events={events}
                 initialEvent={target}
-                onCreate={() => openEvent()}
+                onCreate={() => {setCreatingForImport(true);openEvent()}}
                 onDone={(message) => {
                   setNotice(message);
                   setModal(null);
@@ -1069,6 +786,7 @@ function App() {
             const p = editingPerson;
             setEditingPerson(null);
             setNotice("Anagrafica aggiornata");
+              setPanelVersion(v=>v+1);
             void refresh();
             void showProfile(p);
           }}
@@ -1084,6 +802,7 @@ function App() {
           }}
         />
       )}
+      {workspace!==null&&<EventWorkspace id={workspace} onClose={()=>setWorkspace(null)} onOpen={p=>{setWorkspace(null);void showProfile(p)}} onChange={()=>{void refresh();setPanelVersion(v=>v+1)}}/>}
       {profile && (
         <div className="overlay">
           <section
@@ -1216,7 +935,7 @@ function App() {
                       >
                         <option value="registered">Registrazione</option>
                         <option value="confirmed">Presenza confermata</option>
-                        <option value="unknown">Da verificare</option>
+                        <option value="absent">Assente confermato</option><option value="cancelled">Annullato</option><option value="unknown">Da verificare</option>
                       </select>
                     </label>
                   ))}

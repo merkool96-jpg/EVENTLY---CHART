@@ -7,7 +7,7 @@ import re
 import zipfile
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from .identity import identify, norm, full_name
+from .identity import identify, norm, full_name, groups, parts
 
 ALIASES = {
     'name': ['nomecompleto','nominativo','partecipante','fullname','name','nomeecognome'],
@@ -147,6 +147,14 @@ def apply_import(c,filename,data,config,records):
         summary['skipped']=len(records)
         return {**summary,'rows_read':len(records),'valid_rows':sum(not r.get('issue') for r in records),'issue_rows':sum(bool(r.get('issue')) for r in records),'details':[{**r,'category':'duplicate' if not r.get('issue') else 'issue'} for r in records],'import_id':prior['id'],'repeated':True}
     iid=c.execute('INSERT INTO imports(fingerprint,event_id,filename,sheet,mapping,status,original) VALUES(?,?,?,?,?,?,?)',(key,config['event_id'],filename,config['sheet'],json.dumps(config['mapping']),config['status'],data)).lastrowid
+    ps,membership,members=groups(c)
+    from .profiles import canonical_profiles
+    known=list(ps.values())+list(canonical_profiles(c,ps,membership,members).values())
+    known_first={parts(p)[0] for p in known}
+    known_emails={p['email'].casefold() for p in known if p['email']}
+    known_phones={norm(p['phone']) for p in known if norm(p['phone'])}
+    for row in c.execute('SELECT name FROM aliases'):known_first.add(parts({'name':row['name']})[0])
+    same_source={r['row_number']:r['person_id'] for r in c.execute('SELECT r.row_number,r.person_id FROM import_rows r JOIN imports i ON i.id=r.import_id WHERE i.event_id=? AND i.original=? AND i.sheet=? AND i.mapping=?',(config['event_id'],data,config['sheet'],json.dumps(config['mapping'])))}
     summary.update(rows_read=len(records),valid_rows=0,issue_rows=0,details=[])
     for record in records:
         category='imported'
@@ -157,7 +165,9 @@ def apply_import(c,filename,data,config,records):
             continue
         summary['valid_rows']+=1
         key_record=c.execute('SELECT person_id FROM source_keys WHERE event_id=? AND registration_id=?',(config['event_id'],record.get('registration_id',''))).fetchone() if record.get('registration_id') else None
-        if key_record:
+        if record['row'] in same_source and not key_record:
+            pid=same_source[record['row']];kind='existing'
+        elif key_record:
             pid=key_record['person_id'];kind='existing'
             original=c.execute('SELECT * FROM people WHERE id=?',(pid,)).fetchone()
             if record['email'] and original['email'] and record['email']!=original['email'].casefold():
@@ -165,7 +175,13 @@ def apply_import(c,filename,data,config,records):
                 c.execute('INSERT INTO import_issues(import_id,row_number,original,reason) VALUES(?,?,?,?)',(iid,record['row'],json.dumps(record['original'],default=str),record['issue']))
                 summary['valid_rows']-=1;summary['issue_rows']+=1;summary['details'].append({**record,'category':'issue'});continue
         else:
-            pid,kind=identify(c,record['name'],record['email'],record['phone'],record.get('first_name',''),record.get('last_name',''),record.get('structure','proposed'))
+            first=parts({'name':record['name'],'first_name':record.get('first_name',''),'last_name':record.get('last_name',''),'name_structure':record.get('structure','proposed')})[0]
+            if first not in known_first and not (record['email'] and record['email'] in known_emails) and not (norm(record['phone']) and norm(record['phone']) in known_phones):
+                pid=c.execute('INSERT INTO people(name,email,phone,first_name,last_name,name_structure) VALUES(?,?,?,?,?,?)',(record['name'],record['email'],record['phone'],record.get('first_name',''),record.get('last_name',''),record.get('structure','proposed'))).lastrowid
+                kind='new' if full_name(record['name']) else 'incomplete'
+            else:
+                pid,kind=identify(c,record['name'],record['email'],record['phone'],record.get('first_name',''),record.get('last_name',''),record.get('structure','proposed'))
+            known_first.add(first);known_emails.add(record['email']);known_phones.add(norm(record['phone']))
         if kind in summary:summary[kind]+=1
         status=record.get('status') if config.get('use_row_status') and record.get('status') else config['status']
         old=c.execute('SELECT * FROM attendance WHERE event_id=? AND person_id=?',(config['event_id'],pid)).fetchone()

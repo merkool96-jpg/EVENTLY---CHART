@@ -54,7 +54,7 @@ def analytics(c,filters=None,window=90,reference=None):
     event_rows=[]
     for eid,event in events.items():
         ids={pid for pid,es in confirmed.items() if eid in es}
-        newbies={p['id'] for p in people if p['id'] in ids and p['first_seen']==event['date']}
+        newbies={p['id'] for p in people if p['id'] in ids and min(confirmed[p['id']],key=lambda x:(events[x]['date'],x))==eid}
         returned={pid for pid in ids if any(event['date']<events[x]['date']<=(date.fromisoformat(event['date'])+timedelta(days=window)).isoformat() for x in confirmed[pid])}
         old={pid for pid in ids if any(events[x]['date']<event['date'] for x in confirmed[pid])}
         records=[p['event_data'][eid] for p in people if eid in p['event_data']]
@@ -66,7 +66,10 @@ def analytics(c,filters=None,window=90,reference=None):
         for b in event_rows[i+1:]:
             shared=sum(a['id'] in ids and b['id'] in ids for ids in confirmed.values())
             if shared:affinity.append({'a':a['name'],'b':b['name'],'shared':shared,'category_a':a['category'],'category_b':b['category']})
-    first_date=(filters or {}).get('start','')
+    f=filters or {}
+    event_rows=[e for e in event_rows if (not f.get('event_id') or e['id']==f['event_id']) and (not f.get('category') or e['category']==f['category']) and (not f.get('start') or e['date']>=f['start']) and (not f.get('end') or e['date']<=f['end'])]
+    shown={e['name'] for e in event_rows};affinity=[a for a in affinity if a['a'] in shown or a['b'] in shown]
+    first_date=f.get('start','')
     return {'people':len(chosen),'with_presence':sum(p['visits']>0 for p in chosen),'new':sum(p['visits']>0 and (not first_date or p['first_seen_global']>=first_date) for p in chosen),'returning':sum(p['visits']>0 and bool(first_date) and p['first_seen_global']<first_date for p in chosen),
             'frequencies':{str(n):sum(p['visits']>=n for p in chosen) for n in (2,3,5,10)},'events':event_rows,'affinity':affinity,'coverage':'Solo lo storico importato è conosciuto; nessuna assenza è dedotta dai dati mancanti.',
             'inactive':{str(days):sum(p['last_seen'] is not None and p['last_seen']<=(today-timedelta(days=days)).isoformat() for p in people) for days in (30,90,180,365)}}

@@ -124,3 +124,12 @@ def test_40_restore_verified_copy_confirmation(client,tmp_path):
     assert draft['counts']['people']==1 and len(client.get('/api/people').json())==2
     assert client.post('/api/v2/restore/'+draft['token']+'/confirm').status_code==200
     assert len(client.get('/api/people').json())==1
+
+
+def test_21_weak_same_source_registration_presence_no_new_people(client):
+    e=event(client)
+    text='Nome\nMario\nMario\n'
+    first=upload(client,e,text,'registered');assert first['imported']==2
+    second=upload(client,e,text,'confirmed');assert second['updated']==2 and second['imported']==0
+    assert len(client.get('/api/people').json())==2
+    assert client.get('/api/dashboard').json()['attendance']==2

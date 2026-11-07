@@ -51,7 +51,7 @@ def canonical_profiles(c,ps,membership,members):
     result={}
     for gid,ids in members.items():
         base=ps[gid]
-        first,last=(base['first_name'],base['last_name']) if base.get('name_structure')=='structured' else split_name(base['name'])
+        first,last=(base['first_name'],base['last_name']) if base.get('name_structure') in ('structured','given_only','surname_only','email_only') else split_name(base['name'])
         values={'first_name':first,'last_name':last,'name':base['name'],
                 'email':next((ps[i]['email'] for i in ids if ps[i]['email']),''),
                 'phone':next((ps[i]['phone'] for i in ids if ps[i]['phone']),'')}

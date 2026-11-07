@@ -33,7 +33,7 @@ def name_parts(name):
 
 
 def parts(person):
-    if person.get('name_structure')=='structured':
+    if person.get('name_structure') in ('structured','given_only','surname_only','email_only'):
         return norm(person.get('first_name','')),norm(person.get('last_name',''))
     return name_parts(person['name'])
 

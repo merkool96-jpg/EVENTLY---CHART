@@ -52,6 +52,12 @@ def register(app,db,get_db_path,lock):
             size=min(200,max(1,page_size));offset=(max(1,page)-1)*size
             return {'total':total,'selected':len(selected),'rows':[public_person(p) for p in selected[offset:offset+size]],'top3':[public_person(p) for p in selected[:3]],'page':max(1,page),'page_size':size}
 
+    @app.get('/api/v2/events/similar')
+    def similar_events(name:str,day:str):
+        from difflib import SequenceMatcher
+        from .identity import norm
+        with db() as c:return [dict(r) for r in c.execute('SELECT id,name,date FROM events WHERE date=?',(day,)) if SequenceMatcher(None,norm(name),norm(r['name'])).ratio()>=.55]
+
     @app.get('/api/v2/events/{eid}')
     def event_workspace(eid:int,q:str='',status:str=''):
         with db() as c:
@@ -116,12 +122,14 @@ def register(app,db,get_db_path,lock):
             return {'counts':{k:len(v) for k,v in categories.items()},'rows':categories.get(kind,[]),'kind':kind}
 
     @app.post('/api/v2/issues/{issue_id}/resolve')
-    def resolve_issue(issue_id:int,person_id:int):
+    def resolve_issue(issue_id:int,person_id:int,amount_cents:int|None=None):
         with db(True) as c:
             issue=c.execute('SELECT * FROM import_issues WHERE id=? AND resolved=0',(issue_id,)).fetchone()
             if not issue or not c.execute('SELECT 1 FROM people WHERE id=?',(person_id,)).fetchone():raise HTTPException(404,'Riga o persona non trovata')
             source=c.execute('SELECT * FROM imports WHERE id=?',(issue['import_id'],)).fetchone()
-            aid=c.execute('INSERT OR IGNORE INTO attendance(event_id,person_id,status) VALUES(?,?,?)',(source['event_id'],person_id,source['status']))
+            if 'Spesa' in issue['reason'] and amount_cents is None:raise HTTPException(422,'Indica esplicitamente la spesa corretta prima di attribuire questa riga')
+            if amount_cents is not None and amount_cents<0:raise HTTPException(422,'La spesa non può essere negativa')
+            aid=c.execute('INSERT OR IGNORE INTO attendance(event_id,person_id,status,amount) VALUES(?,?,?,?)',(source['event_id'],person_id,source['status'],amount_cents or 0))
             row=c.execute('SELECT id FROM attendance WHERE event_id=? AND person_id=?',(source['event_id'],person_id)).fetchone()
             c.execute('INSERT INTO attendance_evidence(attendance_id,status,source) VALUES(?,?,?)',(row['id'],source['status'],f'issue:{issue_id}:admin'))
             c.execute('UPDATE import_issues SET resolved=1,person_id=? WHERE id=?',(person_id,issue_id))
