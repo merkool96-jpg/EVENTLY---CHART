@@ -1,8 +1,8 @@
 {
-  "release": "evently-v2.0.1",
+  "release": "evently-v2.1.0",
   "files": {
     ".github/workflows/ci.yml": {
-      "sha256": "43a8c7497adf8494c9d44b1338715cfa1646bd9f303aa8bc88e5a7369d711b53",
+      "sha256": "40f029680bb2ea58bd8ee59974daea4bf02f2d63e9f69903e8c49b9109aeba38",
       "executable": false
     },
     ".gitignore": {
@@ -22,7 +22,7 @@
       "executable": false
     },
     "README.md": {
-      "sha256": "5ab1570e1630db430bc1325016c989f0784ff236de09db040e87fe2ba4e9fbb2",
+      "sha256": "fd7a7fbcf0da13224c5d614298feeee2d38f56aa30d8a18199942ba9c0a1dfbf",
       "executable": false
     },
     "TROVA_EVENTLY.command": {
@@ -30,11 +30,15 @@
       "executable": true
     },
     "backend/app.py": {
-      "sha256": "687ad71dd5cdf5545b8db1faa9b063d8538f9bd0a23d59efd79706b85ffc4b40",
+      "sha256": "b4a3d13ecd7abdaee3722f134d48df59d42fbd8a1a4e2079637acb18ec759dcf",
       "executable": false
     },
     "backend/backup.py": {
       "sha256": "37b9d219f49f073e1fa8d132b23b88d2165609c62c503e5bc7c5eb16f7467672",
+      "executable": false
+    },
+    "backend/backup_info.py": {
+      "sha256": "ded89b7c52a39aaa3d3bbe9e0679d81d78c3f31f2bdd6aab70899a9b8212256b",
       "executable": false
     },
     "backend/exporting.py": {
@@ -54,7 +58,7 @@
       "executable": false
     },
     "backend/operations.py": {
-      "sha256": "51baf1144d0cb54c2dfb94053d133533289c3345781bc74c4ec17667fb207f7c",
+      "sha256": "500fcec162b3d30602883a8543a7b53dea1c21395cd636f88506037005919a4e",
       "executable": false
     },
     "backend/participations.py": {
@@ -65,8 +69,12 @@
       "sha256": "7f8e4696fd68c33613b3de4278595ce1137ac5b69bbfca5cd9b7b836c6c4bd06",
       "executable": false
     },
+    "backend/quality.py": {
+      "sha256": "771e38c7712244bedf347a88167cf0eb7b721b0c64398682c1b6fee33e11dec8",
+      "executable": false
+    },
     "backend/querying.py": {
-      "sha256": "c10950a01f2ccbf32c3b10c8b849e87d0d1f9ed62194b67b82f3f4a874a5f134",
+      "sha256": "c06e262156e0a382b78c2f529c25b8027638ae5c0554390d849a734f0f3c2dcd",
       "executable": false
     },
     "backend/reporting.py": {
@@ -79,6 +87,10 @@
     },
     "backend/requirements.txt": {
       "sha256": "84b4a2878c6bfe22a82d1f982724c3141101b4215f99255f65630b2e34dd5af7",
+      "executable": false
+    },
+    "backend/review.py": {
+      "sha256": "928c67e4ff5b5779c179345c4aec494e6edc48cb6e090017fc003b1f4eabcd0d",
       "executable": false
     },
     "backend/tests/test_app.py": {
@@ -105,16 +117,24 @@
       "sha256": "77cdff648dc387865a79ffd01ecee9fe62eade879ada20f707cd42bdb6f927d2",
       "executable": false
     },
+    "backend/tests/test_v21.py": {
+      "sha256": "e3c5c711049835f74ecd3dcdd485417a17dd0d88be0a0c8b196e8112b6f58eaf",
+      "executable": false
+    },
     "backend/tests/test_v2_contract.py": {
       "sha256": "f5cdaf3e4f62feb23737be969fce52d713942a26e2480469545484242f58d131",
       "executable": false
     },
     "backend/v2api.py": {
-      "sha256": "22110104754dd9d25750ce7f2237845f4248065b04320f2b12ee6d9842d31bba",
+      "sha256": "f0390a176feda7b3401c79cc17b9f527032e7bb35af225ae02d8c09be474fe1f",
       "executable": false
     },
     "docs/ACCEPTANCE_MATRIX_V2.md": {
       "sha256": "875181f3bdc3067d443692865a9e0e7a347301a220e4e2da82a99d76363fdf3f",
+      "executable": false
+    },
+    "docs/AUDIT_V21.md": {
+      "sha256": "961421b3facaad859ce47531e94d6128d5ef92d21a7aee7060381f12e57fd615",
       "executable": false
     },
     "docs/BENCHMARK_V12_COMPARISON.json": {
@@ -123,6 +143,10 @@
     },
     "docs/BENCHMARK_V2.json": {
       "sha256": "1decb81dccb53426b1deeccc6ee2ffadbb0b01af0deea35acbb2af29612337bd",
+      "executable": false
+    },
+    "docs/CONTRAST_V21.json": {
+      "sha256": "9da9a369dfaac6c6f0a9a1d42e55ef44be591816a2d1ff981248fce4591b5ded",
       "executable": false
     },
     "docs/DATA_DICTIONARY_V2.md": {
@@ -145,8 +169,16 @@
       "sha256": "1cb024a406a20c871b5328b551c027be6eade0eb026985b9e915352e2efca306",
       "executable": false
     },
+    "docs/QUALITY_V21_MEASUREMENTS.json": {
+      "sha256": "64b18a9bada23f233e83a61f38d0cb3659cd034d71ddc6ab10cbc2024e54e5a4",
+      "executable": false
+    },
     "docs/RELEASE_REPORT_V2.md": {
       "sha256": "004f87984d9f0abc6e1e984fb4a391b3536f78acaf595828e13e068dcf7bf3b8",
+      "executable": false
+    },
+    "docs/RELEASE_REPORT_V21.md": {
+      "sha256": "727934f2c2eded76eba624f4468326515293dceb6bc9dc008df46217fc438ae0",
       "executable": false
     },
     "docs/RELEASE_V1.2.md": {
@@ -162,7 +194,11 @@
       "executable": false
     },
     "frontend/e2e/attendance-chart.cjs": {
-      "sha256": "464dc3fb121af5aeba47e5fb79029b92479b88fe0e437f2df6bfa1fa670b6008",
+      "sha256": "cd7e342ee3804c623fd20d7f952c907a2e0e2dc128dbee5d9822bf10493b7a05",
+      "executable": false
+    },
+    "frontend/e2e/contrast.cjs": {
+      "sha256": "0095be71ec8f099d5ee8da462d828daa44137bf319950812024213b815603054",
       "executable": false
     },
     "frontend/e2e/performance.cjs": {
@@ -185,16 +221,20 @@
       "sha256": "ee00d3432e71ba4712f7396eeb3e3a542c8a309a1034851c48b8f375b51d788d",
       "executable": false
     },
+    "frontend/e2e/v21.cjs": {
+      "sha256": "54a05a57ca0b869f8d8b632316baad7b4491e733d0a3192a298b36c1669d66be",
+      "executable": false
+    },
     "frontend/index.html": {
       "sha256": "b1e717ae8b9ba746120c3fb7f4b9dad50a8ed07d3ecfc45a8efc493c97ee5f93",
       "executable": false
     },
     "frontend/package-lock.json": {
-      "sha256": "b42bbb0c5c4184c1001d0135a6829aba5d2c05649cd1eead155b24e94d2323aa",
+      "sha256": "5a3cab0992881009036eaf43d7768ad3d9591059e52b73faa3e48793cc482429",
       "executable": false
     },
     "frontend/package.json": {
-      "sha256": "b5ef33ae3fc3dd123dafa176bcefc237c49dd903bea48a0077c2b5828830ee46",
+      "sha256": "b28faec2afaba319814aaa74497c2a02fe2368e466c1a2b120588c7625d93c30",
       "executable": false
     },
     "frontend/postcss.config.js": {
@@ -205,12 +245,16 @@
       "sha256": "aa1e1e64cffcc19d6efd2fbdf4f67d32b806df4a9ba10fbba0f017389e0e1d34",
       "executable": false
     },
+    "frontend/src/EventsPage.tsx": {
+      "sha256": "6bc3d8f17ba70bb8407554dd24e7287ba0f1135ccff3a93cb3d1827a87bac622",
+      "executable": false
+    },
     "frontend/src/ImportWizard.tsx": {
       "sha256": "361b68aa9c8e4dfc27a7979daae63d4549e1f16b9853c7a6d227f0fe09f53ca8",
       "executable": false
     },
     "frontend/src/ParticipantsChart.tsx": {
-      "sha256": "0acc9ddd02999ac0deed1c5bdee21a1b22b8e65d1d1001bc9fb9777896c47c8a",
+      "sha256": "102f1059f463c17ce0f6a437296ea3bed7b5d5d3430c3a720ac337275ef6c88d",
       "executable": false
     },
     "frontend/src/PersonDialogs.tsx": {
@@ -218,11 +262,11 @@
       "executable": false
     },
     "frontend/src/V2Panels.tsx": {
-      "sha256": "49f190ba5371340428fdfac7853fbdc7ba2ab128c6a15c9e03e90ff0b2b248f7",
+      "sha256": "bea6e3c33235894e8b47b9b4369e9eb73bc4339f19ed88c953b7679e958a9811",
       "executable": false
     },
     "frontend/src/main.tsx": {
-      "sha256": "2829e9c13bd18aaa11aa89c20dd58c5053f0685974c85a5575e5c6812be822f5",
+      "sha256": "72a74e693c06688018c639ec7ca29ce1e069ddcaaa15d613632cec9083cbd849",
       "executable": false
     },
     "frontend/src/peopleSorting.ts": {
@@ -230,7 +274,7 @@
       "executable": false
     },
     "frontend/src/style.css": {
-      "sha256": "0bb3d9f41d266e66f5206872d43eeb63e5cdac12b4e70d7ca6a73ad2808176f3",
+      "sha256": "c3eaac72b2e1161ecc752518fe3536d737f5b4c72ff8e261e9eb0ebe15aa7149",
       "executable": false
     },
     "frontend/tailwind.config.js": {
@@ -254,7 +298,7 @@
       "executable": false
     },
     "scripts/build_update_manifest.py": {
-      "sha256": "08c1a05e27cc738320c266ab4828e1c467571b722829f98d99961ae6f5238f24",
+      "sha256": "9e6a76407ef07f8f0528d235af9dd16393fbf00da8cae625a1af0988626855c7",
       "executable": false
     },
     "scripts/find_installation.py": {
@@ -278,7 +322,7 @@
       "executable": false
     },
     "scripts/verify_v2_update.py": {
-      "sha256": "551083d27f40967ace231305ac86864b8e7b2432687def28fa93775108b834db",
+      "sha256": "dbc6a165c1192c7d554237bb969526e089fb4de9a49c933bc4ef6dd1bd9d16a3",
       "executable": false
     }
   }

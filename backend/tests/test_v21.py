@@ -75,6 +75,9 @@ def test_analytics_segments_exact_people_and_exports(client):
     assert client.get('/api/v2/people',params={'filters':json.dumps({'global_min_visits':2})}).json()['total']==2
     known=client.get('/api/dashboard').json()['attributed_value']
     assert known==all_data['attributed_value']==10000
+    assert sum(e['attributed_value'] or 0 for e in client.get('/api/events').json())==known
+    assert sum(p['value'] for p in client.get('/api/v2/people?ranked=true').json()['rows'])==known
+    assert client.get('/api/people/1').json()['value']==4000
     book=load_workbook(io.BytesIO(client.get('/api/exports/participants').content))
     headers=list(book['Partecipanti'].values)[0];column=headers.index('Valore attribuito totale EUR')
     assert sum(r[column] for r in list(book['Partecipanti'].values)[1:])*100==known

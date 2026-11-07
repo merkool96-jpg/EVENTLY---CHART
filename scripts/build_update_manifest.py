@@ -15,7 +15,7 @@ def main():
         if name=='update-manifest.json':continue
         path=safe_path(ROOT,name)
         if path.is_file():files[name]={'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'executable':bool(path.stat().st_mode&0o111)}
-    (ROOT/'update-manifest.json').write_text(json.dumps({'release':'evently-v2.0.1','files':files},indent=2)+'\n')
+    (ROOT/'update-manifest.json').write_text(json.dumps({'release':'evently-v2.1.0','files':files},indent=2)+'\n')
     print('Manifest generato:',len(files),'file applicativi; nessun database o backup incluso')
 
 

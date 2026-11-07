@@ -1,11 +1,13 @@
-# EVENTLY V2.0
+# EVENTLY V2.1
 
 EVENTLY organizza eventi, partecipanti, presenze e relazioni della community sul tuo computer. React/Vite/TypeScript/Tailwind, FastAPI, SQLite e importazione XLSX/XLS/CSV locali. Nessun servizio a pagamento, account o API AI necessario. Internet serve per installare le dipendenze gratuite al primo avvio o quando cambiano; l'uso successivo è locale.
+
+La V2.1 conserva la direzione visiva e aggiunge tre code identità con risoluzione guidata, vera paginazione Qualità Dati, segmenti Analytics cliccabili, ricerca/ordinamento e vista tabellare eventi, definizioni KPI e backup confrontabili. Il motore identità e lo schema4 restano invariati. L'aggiornamento non richiede reimportazioni o un nuovo ripristino del database.
 
 ## Aggiornamento semplice sul Mac
 
 1. Chiudi EVENTLY premendo **Ctrl+C nella finestra Terminale che lo ha avviato**.
-2. Scarica e decomprimi l'unico [pacchetto V2](https://github.com/merkool96-jpg/EVENTLY---CHART/archive/refs/heads/feat/evently-v2.zip).
+2. Scarica e decomprimi l'unico [pacchetto unico V2.1](https://github.com/merkool96-jpg/EVENTLY---CHART/archive/refs/tags/v2.1.0.zip).
 3. Nella cartella **appena scaricata**, fai doppio clic su **AGGIORNA_EVENTLY.command**.
 4. Nella finestra di scelta, seleziona la **vecchia cartella EVENTLY che usi già**, quella che contiene i dati. Attendi «Aggiornamento completato».
 5. Dalla **vecchia cartella**, riapri **AVVIA_EVENTLY.command**. Lascia aperto il Terminale; si apre il browser su **http://127.0.0.1:8765**.
@@ -14,13 +16,13 @@ Non spostare il database e non sostituire manualmente la vecchia cartella. Il co
 
 Prerequisiti: Python 3.12+ e Node.js LTS22+ con npm. Per una nuova installazione, apri direttamente AVVIA_EVENTLY.command. Non avviare due copie contemporaneamente.
 
-In **Overview** c'è un solo grafico con due pulsanti: **Economics** mostra il valore attribuito, **Partecipanti** mostra i presenti confermati per evento. Non aggiunge una seconda scheda. Versione riconoscibile in Impostazioni: **V2.0.1 · grafico Economics / Partecipanti**.
+In **Overview** c'è un solo grafico con due pulsanti: **Valore attribuito** mostra il valore attribuito, **Presenze** mostra i presenti confermati per evento. Non aggiunge una seconda scheda. Versione riconoscibile in Impostazioni: **V2.1 · locale e gratuito**.
 
 ### Se hai tante cartelle EVENTLY
 
 Lascia aperta la copia che mostra i tuoi dati. Dal pacchetto nuovo apri **TROVA_EVENTLY.command**: individua il server locale sulle porte abituali e apre il Finder evidenziando AVVIA_EVENTLY.command nella cartella in uso, senza aprire o modificare il database. Se trova più copie o nessuna, non ne sceglie una arbitrariamente. Mantieni aperto quel Finder. Crea un alias di AVVIA_EVENTLY.command (clic destro → Crea alias), sposta **solo l'alias** sulla Scrivania e chiamalo EVENTLY: da allora avvia sempre quello. Non spostare né rinominare la cartella applicativa o il database.
 
-Poi ferma il server con Ctrl+C nel suo Terminale e lancia AGGIORNA_EVENTLY.command dal pacchetto nuovo, scegliendo **la cartella appena individuata**, non quella del download. Riapri dall'alias; nel browser premi Cmd+Maiusc+R e controlla i due pulsanti sopra il grafico. Non serve reimportare file o ripristinare nuovamente il database. Il rilevatore è collaudato con processi simulati; l'apertura fisica del Finder richiede il Mac.
+Poi ferma il server con Ctrl+C nel suo Terminale e lancia AGGIORNA_EVENTLY.command dal pacchetto nuovo, scegliendo **la cartella appena individuata**, non quella del download. Riapri dall'alias; nel browser premi Cmd+Maiusc+R e controlla i pulsanti Valore attribuito / Presenze sopra il grafico. Non serve reimportare file o ripristinare nuovamente il database. Il rilevatore è collaudato con processi simulati; l'apertura fisica del Finder richiede il Mac.
 
 ## Percorsi da provare
 
@@ -39,7 +41,7 @@ Archiviare un evento mantiene normalmente lo storico. **Escludi dalle statistich
 
 ## Verifica, limiti e aggiornamento
 
-[Report di consegna e limiti](docs/RELEASE_REPORT_V2.md), [42 scenari e prove](docs/ACCEPTANCE_MATRIX_V2.md), [regole di prodotto](docs/PRODUCT_RULES_V2.md), [flussi](docs/UX_FLOWS_V2.md), [dizionario](docs/DATA_DICTIONARY_V2.md), [milestone](docs/IMPLEMENTATION_PLAN_V2.md).
+[Audit preventivo V2.1](docs/AUDIT_V21.md), [report di consegna e limiti V2.1](docs/RELEASE_REPORT_V21.md), [42 scenari e prove](docs/ACCEPTANCE_MATRIX_V2.md), [regole di prodotto](docs/PRODUCT_RULES_V2.md), [flussi](docs/UX_FLOWS_V2.md), [dizionario](docs/DATA_DICTIONARY_V2.md), [milestone](docs/IMPLEMENTATION_PLAN_V2.md).
 
 Il database abituale è `backend/evently.db`, escluso da Git. `EVENTLY_DB` permette un percorso di sviluppo alternativo; l'updater Mac gestisce l'installazione standard nella vecchia cartella. Non usare dati personali per le prove. Le fusioni distruttive delle primissime versioni V1 non sono ricostruibili senza una fonte o backup precedente: non viene inventata provenienza.
 
@@ -73,3 +75,14 @@ EVENTLY_DB=/tmp/evently-upgrade-control.db .venv/bin/python -m scripts.verify_v2
 ```
 
 Il manifest rileva corruzioni del pacchetto, non autentica un'origine sconosciuta: scarica il pacchetto dal repository indicato.
+
+
+## Collaudo V2.1
+
+`npm run test:v21 --prefix frontend` richiede una nuova istanza locale con database sintetico vuoto (URL configurabile via EVENTLY_URL). `test:contrast` esamina sette pagine con i dati già creati dalla suite V2.1. Il workflow CI avvia istanze distinte per importazione, profili e V2.1. Nessuna suite usa il database del Mac.
+
+```bash
+EVENTLY_DB=/tmp/evently-v21-upgrade-control.db .venv/bin/python -m scripts.verify_v2_update --base f08e73e
+```
+
+Questa seconda simulazione verifica specificamente V2.0.1→V2.1/schema4→4; la simulazione senza `--base` verifica ancora V1.2→V2.1/schema3→4. Confronta tutte le colonne e righe preesistenti, oltre a backup codice/DB e integrità/FK.

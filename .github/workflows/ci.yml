@@ -19,6 +19,8 @@ jobs:
       - run: EVENTLY_DB="$RUNNER_TEMP/evently-tests-control.db" python -m pytest backend/tests -v
       - name: Rehearse V1.2 to V2 update on synthetic data
         run: EVENTLY_DB="$RUNNER_TEMP/evently-upgrade-control.db" python -m scripts.verify_v2_update
+      - name: Rehearse V2.0.1 to V2.1 on synthetic data
+        run: EVENTLY_DB="$RUNNER_TEMP/evently-v21-upgrade-control.db" python -m scripts.verify_v2_update --base f08e73e
       - run: npm ci && npm run build && npm audit --audit-level=high
         working-directory: frontend
       - name: Install Chromium for UI smoke test
@@ -49,3 +51,13 @@ jobs:
             sleep 1
           done
           EVENTLY_URL=http://127.0.0.1:8003 npm run test:profiles --prefix frontend
+          EVENTLY_DB="$RUNNER_TEMP/evently-v21.db" python -m uvicorn backend.app:app --host 127.0.0.1 --port 8004 > "$RUNNER_TEMP/evently-v21.log" 2>&1 &
+          v21_pid=$!
+          trap 'kill "$api_pid" "$profiles_pid" "$v21_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8004/api/health > /dev/null; then break; fi
+            kill -0 "$v21_pid"
+            sleep 1
+          done
+          EVENTLY_URL=http://127.0.0.1:8004 npm run test:v21 --prefix frontend
+          EVENTLY_URL=http://127.0.0.1:8004 npm run test:contrast --prefix frontend

@@ -1,5 +1,6 @@
 """Full package upgrade rehearsal; ONLY a disposable V1.2 synthetic install."""
 import json
+import argparse
 import os
 from pathlib import Path
 import sqlite3
@@ -22,9 +23,10 @@ def snapshot(path):
 
 
 def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--base',default=BASE);args=parser.parse_args()
     with tempfile.TemporaryDirectory(prefix='evently-v2-upgrade-') as temporary:
         target=Path(temporary)/'previous';target.mkdir()
-        archive=subprocess.run(['git','archive',BASE],cwd=ROOT,capture_output=True,check=True).stdout
+        archive=subprocess.run(['git','archive',args.base],cwd=ROOT,capture_output=True,check=True).stdout
         subprocess.run(['tar','-x','-C',str(target)],input=archive,check=True)
         database=target/'backend/evently.db'
         env={**os.environ,'EVENTLY_DB':str(database),'PYTHONPATH':str(target)}
@@ -39,8 +41,9 @@ assert c.post('/api/matches/decision',json={'a':1,'b':3,'action':'separate'}).st
 '''
         subprocess.run([sys.executable,'-c',seed],cwd=target,env=env,check=True,capture_output=True)
         before=snapshot(database)
+        with sqlite3.connect(database) as c:previous_schema=c.execute('PRAGMA user_version').fetchone()[0]
         backup=apply_update(ROOT,target,False)
-        with sqlite3.connect(database) as c:assert c.execute('PRAGMA user_version').fetchone()[0]==3
+        with sqlite3.connect(database) as c:assert c.execute('PRAGMA user_version').fetchone()[0]==previous_schema
         launch='''from backend.app import app
 from fastapi.testclient import TestClient
 c=TestClient(app)
@@ -59,8 +62,8 @@ assert c.get('/api/v2/people').json()['total']==2
         assert (backup/'codice/backend/app.py').exists()
         backups=list((target/'backend/backups').glob('*.db'))
         assert backups
-        with sqlite3.connect(backups[0]) as c:assert c.execute('PRAGMA user_version').fetchone()[0]==3
-        print(json.dumps({'base':BASE,'schema_before':3,'schema_after':4,'legacy_tables_preserved':list(before),'database_backup_verified':True,'code_backup_verified':True,'scope':'temporary synthetic installation only'},indent=2))
+        with sqlite3.connect(backups[0]) as c:assert c.execute('PRAGMA user_version').fetchone()[0]==previous_schema
+        print(json.dumps({'base':args.base,'schema_before':previous_schema,'schema_after':4,'legacy_tables_preserved':list(before),'database_backup_verified':True,'code_backup_verified':True,'scope':'temporary synthetic installation only'},indent=2))
 
 
 if __name__=='__main__':main()
