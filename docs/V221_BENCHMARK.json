@@ -1,0 +1,19 @@
+{
+  "synthetic_profiles": 10000,
+  "timings": {
+    "overview_ms": 1460,
+    "people_page_ms": 859,
+    "search_ms": 846,
+    "vip_preview_10k_ms": 969,
+    "xlsx_10k_ms": 1889,
+    "segments_ms": 840,
+    "pdf_report_10k_ms": 1416,
+    "xlsx_report_10k_ms": 2315
+  },
+  "rendered_people_rows": 50,
+  "exported_email_counts": {
+    "with_email": 5000,
+    "without_email": 5000
+  },
+  "method": "Single Chromium run against actual local HTTP API, includes browser/network, not p95"
+}

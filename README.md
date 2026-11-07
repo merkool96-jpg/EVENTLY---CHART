@@ -1,13 +1,15 @@
-# EVENTLY V2.2
+# EVENTLY V2.2.1
 
 EVENTLY organizza eventi, partecipanti, presenze e relazioni della community sul tuo computer. React/Vite/TypeScript/Tailwind, FastAPI, SQLite e importazione XLSX/XLS/CSV locali. Nessun servizio a pagamento, account o API AI necessario. Internet serve per installare le dipendenze gratuite al primo avvio o quando cambiano; l'uso successivo è locale.
 
 La V2.2 integra segmenti dinamici configurabili, VIP manuali, tag, note riservate e premi tracciati; Community Insights, confronti eventi, ritorno a30/60/90/180 giorni e report PDF/XLSX generati localmente. Conserva importazioni, identità reversibili, ordinamento e ottimizzazioni precedenti. Lo schema5 è additivo, con backup verificato; nessuna reimportazione necessaria.
 
+V2.2.1 stabilizza la riassegnazione CRM (solo identità originali coinvolte, audit e undo), chiarisce VIP/segmenti alla generazione e distingue PDF aggregato da Excel dettagliato con avviso sui dati personali. Il rendering dei report avviene dopo aver rilasciato il lock del database. Schema5 invariato. [Riscontri, prove e limiti V2.2.1](docs/RELEASE_V221.md).
+
 ## Aggiornamento semplice sul Mac
 
 1. Chiudi EVENTLY premendo **Ctrl+C nella finestra Terminale che lo ha avviato**.
-2. Scarica e decomprimi l'unico [pacchetto unico V2.2](https://github.com/merkool96-jpg/EVENTLY---CHART/archive/refs/tags/v2.2.0.zip).
+2. Scarica e decomprimi l'unico [pacchetto unico V2.2.1](https://github.com/merkool96-jpg/EVENTLY---CHART/archive/refs/tags/v2.2.1.zip).
 3. Nella cartella **appena scaricata**, fai doppio clic su **AGGIORNA_EVENTLY.command**.
 4. Nella finestra di scelta, seleziona la **vecchia cartella EVENTLY che usi già**, quella che contiene i dati. Attendi «Aggiornamento completato».
 5. Dalla **vecchia cartella**, riapri **AVVIA_EVENTLY.command**. Lascia aperto il Terminale; si apre il browser su **http://127.0.0.1:8765**.
@@ -16,7 +18,7 @@ Non spostare il database e non sostituire manualmente la vecchia cartella. Il co
 
 Prerequisiti: Python 3.12+ e Node.js LTS22+ con npm. Per una nuova installazione, apri direttamente AVVIA_EVENTLY.command. Non avviare due copie contemporaneamente.
 
-In **Overview** c'è un solo grafico con due pulsanti: **Valore attribuito** mostra il valore attribuito, **Presenze** mostra i presenti confermati per evento. Non aggiunge una seconda scheda. Versione riconoscibile in Impostazioni: **V2.2 · locale e gratuito**.
+In **Overview** c'è un solo grafico con due pulsanti: **Valore attribuito** mostra il valore attribuito, **Presenze** mostra i presenti confermati per evento. Non aggiunge una seconda scheda. Versione riconoscibile in Impostazioni: **V2.2.1 · locale e gratuito**.
 
 ### Se hai tante cartelle EVENTLY
 

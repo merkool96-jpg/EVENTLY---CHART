@@ -1,8 +1,8 @@
 {
-  "release": "evently-v2.2.0",
+  "release": "evently-v2.2.1",
   "files": {
     ".github/workflows/ci.yml": {
-      "sha256": "ac1acbe5b719341b285b61809cac08a97101ec227ff5dccc9aa480278fe17425",
+      "sha256": "92b810cc1cf6f93f745002085e0ffeba874a064ff40d650eeca62de5dc9fcc53",
       "executable": false
     },
     ".gitignore": {
@@ -22,7 +22,7 @@
       "executable": false
     },
     "README.md": {
-      "sha256": "a6beb63add63d907aba4b7b3f1c8dc269906892e6c96c6f38060643232a8685e",
+      "sha256": "cb6abe86d9c58b42c83ab3de4f7c0b45ab0bd549ccd2205b3d8ad4b3e4e24b91",
       "executable": false
     },
     "TROVA_EVENTLY.command": {
@@ -30,7 +30,7 @@
       "executable": true
     },
     "backend/app.py": {
-      "sha256": "408b09fb81669f6e425a2b6c25e8dc76236567442264e3aa685d63da88fa605d",
+      "sha256": "c613acfb942db43fc34293bb980468a395f07f343acc33ada2d6e26bacab8068",
       "executable": false
     },
     "backend/backup.py": {
@@ -46,7 +46,7 @@
       "executable": false
     },
     "backend/crm.py": {
-      "sha256": "91cb3c5e2eb1003ed80960c601aae78180a230813284ec08382293aa82a144af",
+      "sha256": "193837eeb22953fd896072bbd4f1b53571d821eb457cbe8461f9591c1bfdd826",
       "executable": false
     },
     "backend/crm_migration.py": {
@@ -82,7 +82,7 @@
       "executable": false
     },
     "backend/post_report.py": {
-      "sha256": "9b987e4cbe798a5d884ce8a81cd09d1f602c2c02cdef7cb732ad57c8cceb7bc6",
+      "sha256": "dfaa7e776618f76797f915a9ed8a27b88d7e19537dbad8d8f624f2cc9e5f5911",
       "executable": false
     },
     "backend/profiles.py": {
@@ -157,12 +157,16 @@
       "sha256": "6236a3afb260a291b666d20c7eec6f0983fe6e4d57db40b38ac04b125f65f8c0",
       "executable": false
     },
+    "backend/tests/test_v221.py": {
+      "sha256": "be706324c1c467274e8b117eb4ad9090ae4afbd8efad047c6db7ce6a05467717",
+      "executable": false
+    },
     "backend/tests/test_v2_contract.py": {
       "sha256": "5bd9a0231a3344eb603f2c9836f9ab67d16c81dcb9a84bf4c0340c729c97de7a",
       "executable": false
     },
     "backend/v22api.py": {
-      "sha256": "70eafcb38143b7bcc781fcc30409083d9825656c5e0648fab23459fc4eac28a2",
+      "sha256": "3717cf82f3a718322468fb534b0466dbd8f7934cc95a07f3a3e5fe4cc146bf74",
       "executable": false
     },
     "backend/v2api.py": {
@@ -175,6 +179,10 @@
     },
     "docs/AUDIT_V21.md": {
       "sha256": "961421b3facaad859ce47531e94d6128d5ef92d21a7aee7060381f12e57fd615",
+      "executable": false
+    },
+    "docs/AUDIT_V221.md": {
+      "sha256": "0d5bc776d685cdfe7c77e479e059bffdbc4026b0f3104e9c4f2b51b0ccdeadc5",
       "executable": false
     },
     "docs/BENCHMARK_V12_COMPARISON.json": {
@@ -225,8 +233,16 @@
       "sha256": "764e78da7163f97b06f50ae4d316de729d574f788e33467eec0dd369f1957f86",
       "executable": false
     },
+    "docs/RELEASE_V221.md": {
+      "sha256": "bf93cf3d29783ccc9a99ea29b136072ed3f06ff8a9b583e04eb679cd6b15729d",
+      "executable": false
+    },
     "docs/UX_FLOWS_V2.md": {
       "sha256": "f21fd7ab12feb3b6934f3848219c46c7e7cc0dbc0b86adb18295cb33875d3f4b",
+      "executable": false
+    },
+    "docs/V221_BENCHMARK.json": {
+      "sha256": "3ab1bb3a1cddb62a81e6a29b97d29be253a8b7b4abf2e12ae195e4dea116df72",
       "executable": false
     },
     "docs/V22_BENCHMARK.json": {
@@ -278,11 +294,11 @@
       "executable": false
     },
     "frontend/e2e/v22-large.cjs": {
-      "sha256": "6ebcacc0df9093d510eddb158df63d38285e7b4f5b1a9d33fe8d46730e855d40",
+      "sha256": "9daeae87a98efe02db82da4467611cb43398aefd2670675adc72d7e6ab0f1b2f",
       "executable": false
     },
     "frontend/e2e/v22.cjs": {
-      "sha256": "dbaa428da40fadc34cf9e8e1666c23b4de73a0630f5c9e6be29bcc60a38c47c6",
+      "sha256": "9e4eab7ca3b341a9afb0117de569f0a0728840d34aeee335c4ffae63acdf638e",
       "executable": false
     },
     "frontend/index.html": {
@@ -290,11 +306,11 @@
       "executable": false
     },
     "frontend/package-lock.json": {
-      "sha256": "3ce0d0ba645ab79e0dac353792f170424b15cf63cc5b0fdcb3c307d9fc19c28e",
+      "sha256": "d0adac21b101abeca1008759d7fa21a0fceb4f09c85601fd118a4f9866023a72",
       "executable": false
     },
     "frontend/package.json": {
-      "sha256": "32de5efe92758683c5b3a5d816d262b68f3b58966f50527d7f0c88b01d079ae0",
+      "sha256": "d87d3c4d089ba181008884018e3d7835dd3ffc7f6a1f9d444b9e30e469123c59",
       "executable": false
     },
     "frontend/postcss.config.js": {
@@ -306,7 +322,7 @@
       "executable": false
     },
     "frontend/src/CommunityUI.tsx": {
-      "sha256": "e2df925dc528548c7450a8a78a55f7e08e2a5795eb53388cabea2551c59bc906",
+      "sha256": "852c5f9b97139dbc8b8bc4533a9ee1b1b110e4ccc48386230107e13aaa0cd88c",
       "executable": false
     },
     "frontend/src/EventsPage.tsx": {
@@ -326,7 +342,7 @@
       "executable": false
     },
     "frontend/src/V2Panels.tsx": {
-      "sha256": "80d7dda350127678b932377cf7aa7b9d680d2154a8748c6582b238dcc9344935",
+      "sha256": "e0757f283d434903f1e1db5303cc92129c3e99a0750c83aa3addc59b5ee1e887",
       "executable": false
     },
     "frontend/src/main.tsx": {
@@ -362,7 +378,7 @@
       "executable": false
     },
     "scripts/build_update_manifest.py": {
-      "sha256": "f8aa003492f252242e623ed511557010eb95b08853d5797cbf51738e9386469a",
+      "sha256": "2d6b74b5b01dba904a82fb091a10a34a42eb6e298a9f3319c0f319b658174a7c",
       "executable": false
     },
     "scripts/find_installation.py": {
@@ -386,7 +402,7 @@
       "executable": false
     },
     "scripts/verify_v2_update.py": {
-      "sha256": "f4eb52752a232859af69f0e87ad16f6e60fff46113951778efde12efd3a3daec",
+      "sha256": "ce7ffe2ee58407a373cb8f6162d643fb3ebd65ef2ba57bbb9d4113ded3486afb",
       "executable": false
     }
   }
