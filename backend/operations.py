@@ -54,7 +54,7 @@ def analytics(c,filters=None,window=90,reference=None):
     event_rows=[]
     for eid,event in events.items():
         ids={pid for pid,es in confirmed.items() if eid in es}
-        newbies={p['id'] for p in people if p['id'] in ids and min(confirmed[p['id']],key=lambda x:(events[x]['date'],x))==eid}
+        newbies={p['id'] for p in people if p['id'] in ids and min(events[x]['date'] for x in confirmed[p['id']])==event['date']}
         returned={pid for pid in ids if any(event['date']<events[x]['date']<=(date.fromisoformat(event['date'])+timedelta(days=window)).isoformat() for x in confirmed[pid])}
         old={pid for pid in ids if any(events[x]['date']<event['date'] for x in confirmed[pid])}
         records=[p['event_data'][eid] for p in people if eid in p['event_data']]
