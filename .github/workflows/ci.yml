@@ -23,6 +23,8 @@ jobs:
         run: EVENTLY_DB="$RUNNER_TEMP/evently-v21-upgrade-control.db" python -m scripts.verify_v2_update --base f08e73e
       - name: Rehearse V2.1 to V2.2 on synthetic data
         run: EVENTLY_DB="$RUNNER_TEMP/evently-v22-upgrade-control.db" python -m scripts.verify_v2_update --base v2.1.0
+      - name: Rehearse V2.2 to V2.2.1 including CRM on synthetic data
+        run: EVENTLY_DB="$RUNNER_TEMP/evently-v221-upgrade-control.db" python -m scripts.verify_v2_update --base v2.2.0
       - run: npm ci && npm run build && npm audit --audit-level=high
         working-directory: frontend
       - name: Install Chromium for UI smoke test

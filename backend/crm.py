@@ -44,12 +44,48 @@ def insert(c,kind,scope,data,operator='Amministratore locale',tag_id=None,campai
     after=dict(c.execute('SELECT * FROM crm_records WHERE id=?',(pid,)).fetchone());log(c,'create',None,after,operator,batch,reason);return pid
 
 
-def change(c,row,operator='Amministratore locale',batch=None,reason='',**fields):
+def change(c,row,operator='Amministratore locale',batch=None,reason='',audit_action='update',**fields):
     before={k:v for k,v in row.items() if k not in ('data','origins','possible_owners')}
     allowed={'active','payload','scope'}
     if not fields or set(fields)-allowed:raise HTTPException(422,'Modifica CRM non valida')
     c.execute('UPDATE crm_records SET '+','.join(k+'=?' for k in fields)+',revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=?',(*fields.values(),row['id']))
-    after=dict(c.execute('SELECT * FROM crm_records WHERE id=?',(row['id'],)).fetchone());log(c,'update',before,after,operator,batch,reason)
+    after=dict(c.execute('SELECT * FROM crm_records WHERE id=?',(row['id'],)).fetchone());log(c,audit_action,before,after,operator,batch,reason)
+
+
+def reassign(c,rid,body):
+    """Resolve only a currently ambiguous record to one of its ORIGINAL owners."""
+    pid=body.get('person_id');revision=body.get('revision')
+    if type(pid) is not int or pid<1 or type(revision) is not int or revision<1:
+        raise HTTPException(422,'Identità e revisione devono essere numeri interi validi')
+    reason=body.get('reason')
+    if not isinstance(reason,str) or not 5<=len(reason.strip())<=1000:
+        raise HTTPException(422,'Indica una motivazione da 5 a 1.000 caratteri')
+    row=c.execute('SELECT * FROM crm_records WHERE id=? AND active=1',(rid,)).fetchone()
+    if not row:raise HTTPException(404,'Informazione non trovata')
+    if revision!=row['revision']:raise HTTPException(409,'Informazione cambiata: ricarica la coda')
+    _,mapping,_=groups(c);scope=json.loads(row['scope'])
+    roots={mapping.get(i) for i in scope}
+    if len(roots)==1 and None not in roots:
+        raise HTTPException(409,'Questa informazione ha già un proprietario certo: ricarica la coda')
+    if pid not in scope or pid not in mapping:
+        raise HTTPException(422,'Scegli una delle identità originali coinvolte in questa separazione')
+    change(c,dict(row),scope=dumps([pid]),reason='Riassegnazione manuale: '+reason.strip(),audit_action='reassign')
+    return {'ok':True,'id':rid,'revision':revision+1}
+
+
+def undo_reassignment(c,rid,body):
+    """Restore the previous provenance, only before any later edit to the record."""
+    if body.get('confirm') is not True:raise HTTPException(422,'Conferma esplicitamente l’annullamento')
+    if type(body.get('revision')) is not int:raise HTTPException(422,'Revisione non valida')
+    row=c.execute('SELECT * FROM crm_records WHERE id=? AND active=1',(rid,)).fetchone()
+    if not row:raise HTTPException(404,'Informazione non trovata')
+    audit=c.execute('SELECT * FROM crm_audit WHERE record_id=? ORDER BY id DESC LIMIT 1',(rid,)).fetchone()
+    if body['revision']!=row['revision'] or not audit or audit['action']!='reassign':
+        raise HTTPException(409,'Informazione cambiata: questa riassegnazione non può più essere annullata')
+    before=json.loads(audit['before_data']);after=json.loads(audit['after_data'])
+    if dict(row)!=after:raise HTTPException(409,'Informazione cambiata: ricarica la coda')
+    change(c,dict(row),scope=before['scope'],reason='Annullamento confermato della riassegnazione',audit_action='reassign_undo')
+    return {'ok':True,'id':rid,'revision':row['revision']+1}
 
 
 def snapshot(c):

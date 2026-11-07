@@ -144,13 +144,11 @@ def register(app,db):
 
     @app.post('/api/v22/records/{rid}/reassign')
     def reassign(rid:int,body:dict):
-        with db(True) as c:
-            row=c.execute('SELECT * FROM crm_records WHERE id=? AND active=1',(rid,)).fetchone();pid=body.get('person_id');reason=str(body.get('reason','')).strip()
-            if not row or not c.execute('SELECT 1 FROM people WHERE id=?',(pid,)).fetchone():raise HTTPException(404,'Informazione o identità non trovata')
-            if len(reason)<5:raise HTTPException(422,'Indica una motivazione di almeno 5 caratteri')
-            if body.get('revision')!=row['revision']:raise HTTPException(409,'Informazione cambiata: ricarica la coda')
-            crm.change(c,dict(row),scope=crm.dumps([pid]),reason='Riassegnazione manuale: '+reason)
-        return {'ok':True}
+        with db(True) as c:return crm.reassign(c,rid,body)
+
+    @app.post('/api/v22/records/{rid}/reassign/undo')
+    def undo_reassign(rid:int,body:dict):
+        with db(True) as c:return crm.undo_reassignment(c,rid,body)
 
     @app.get('/api/v22/performance/{eid}')
     def performance(eid:int):
@@ -177,9 +175,12 @@ def register(app,db):
     def event_report(eid:int,format:str='pdf'):
         from .post_report import model,pdf,xlsx
         if format not in ('pdf','xlsx'):raise HTTPException(422,'Formato report non valido')
-        with db() as c:
-            data=model(c,eid);content=pdf(data) if format=='pdf' else xlsx(data)
-        return Response(content,media_type='application/pdf' if format=='pdf' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',headers={'Content-Disposition':f'attachment; filename="EVENTLY-report-{eid}.{format}"'})
+        # Materialize every field in ONE coherent read transaction. Rendering
+        # uses this detached model after releasing the global DB lock/connection.
+        with db() as c:data=model(c,eid)
+        content=pdf(data) if format=='pdf' else xlsx(data)
+        filename=f'EVENTLY-report-riepilogo-{eid}.pdf' if format=='pdf' else f'EVENTLY-report-dettagliato-dati-personali-{eid}.xlsx'
+        return Response(content,media_type='application/pdf' if format=='pdf' else 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',headers={'Content-Disposition':f'attachment; filename="{filename}"'})
 
     @app.post('/api/v22/export/preview')
     def export_preview(body:dict):

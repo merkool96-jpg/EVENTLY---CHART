@@ -1,4 +1,4 @@
-"""Full package upgrade rehearsal; ONLY a disposable V1.2 synthetic install."""
+"""Full package upgrade rehearsal; ONLY disposable synthetic installations."""
 import json
 import argparse
 import os
@@ -38,6 +38,14 @@ r=c.post(f'/api/events/{e}/import',files={'file':('synthetic.csv',b'Nome complet
 assert r.status_code==200,r.text
 assert c.post('/api/matches/decision',json={'a':1,'b':2,'action':'merge'}).status_code==200
 assert c.post('/api/matches/decision',json={'a':1,'b':3,'action':'separate'}).status_code==200
+if c.get('/api/health').json().get('schema_version',0)>=5:
+    tid=c.post('/api/v22/tags',json={'name':'Tag sintetico aggiornamento'}).json()['id']
+    cid=c.post('/api/v22/campaigns',json={'name':'Campagna sintetica'}).json()['id']
+    for action,data in [('vip_add',{}),('tag_add',{'tag_ids':[tid]}),('reward',{'name':'Grazie sintetico','type':'Voucher','date':'2026-01-01','status':'proposed','campaign_id':cid})]:
+        draft=c.post('/api/v22/bulk/preview',json={'action':action,'ids':[1],'data':data})
+        assert draft.status_code==200,draft.text
+        assert c.post('/api/v22/bulk/'+draft.json()['token']+'/confirm').status_code==200
+    assert c.post('/api/v22/people/1/notes',json={'text':'Nota sintetica da preservare'}).status_code==200
 '''
         subprocess.run([sys.executable,'-c',seed],cwd=target,env=env,check=True,capture_output=True)
         before=snapshot(database)
@@ -51,6 +59,12 @@ assert c.get('/api/health').status_code==200
 assert c.get('/api/dashboard').json()['attendance']==2
 assert c.get('/api/v2/people').json()['total']==2
 '''
+        if 'crm_records' in before:
+            launch+='''
+profile=c.get('/api/v22/people/1').json()
+assert profile['vip'] and len(profile['tags'])==1
+assert {r['kind'] for r in profile['records']}=={'vip','tag','reward','note'}
+'''
         subprocess.run([sys.executable,'-c',launch],cwd=target,env=env,check=True,capture_output=True)
         with sqlite3.connect(database) as c:
             assert c.execute('PRAGMA user_version').fetchone()[0]==5
@@ -63,6 +77,9 @@ assert c.get('/api/v2/people').json()['total']==2
         backups=list((target/'backend/backups').glob('*.db'))
         assert backups
         with sqlite3.connect(backups[0]) as c:assert c.execute('PRAGMA user_version').fetchone()[0]==previous_schema
+        compatible=json.loads((backup/'coppia-compatibile.json').read_text())
+        verified=target/compatible['database_precedente']
+        assert snapshot(verified)==before,'Backup does not match every pre-update table/row'
         print(json.dumps({'base':args.base,'schema_before':previous_schema,'schema_after':5,'legacy_tables_preserved':list(before),'database_backup_verified':True,'code_backup_verified':True,'scope':'temporary synthetic installation only'},indent=2))
 
 

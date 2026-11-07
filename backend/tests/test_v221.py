@@ -15,7 +15,7 @@ def client(tmp_path,monkeypatch):
 
 def conflicted(kind):
     with module.db(True) as c:
-        c.executemany('INSERT INTO people(name,email) VALUES(?,?)',[(f'Persona {i}',f'p{i}@example.test') for i in (1,2,3)])
+        c.executemany('INSERT INTO people(name,email) VALUES(?,?)',[(f'Persona {i}',f'p{1 if i==3 else i}@example.test') for i in (1,2,3)])
         tid=c.execute("INSERT INTO crm_tags(name,normalized,color) VALUES('Partner','partner','#2f654b')").lastrowid if kind=='tag' else None
         data={'text':'Nota privata originale'} if kind=='note' else {'enabled':True} if kind=='vip' else {'name':'Premio','type':'Voucher','date':'2026-01-01','status':'proposed'} if kind=='reward' else {}
         rid=crm.insert(c,kind,[1,2],data,'Autore originale',tag_id=tid)
@@ -35,7 +35,8 @@ def test_reassignment_rejects_outsiders_without_any_mutation(client,kind):
     assert state(rid)==before
     # Even if an outsider is merged into a legitimate owner's current group,
     # it is not an ORIGINAL identity involved in this record's conflict.
-    client.post('/api/matches/decision',json={'a':1,'b':3,'action':'merge'})
+    merged=client.post('/api/matches/decision',json={'a':1,'b':3,'action':'merge'})
+    assert merged.status_code==200,merged.text
     before=state(rid)
     r=client.post(f'/api/v22/records/{rid}/reassign',json={'person_id':3,'revision':1,'reason':'Stesso gruppo attuale'})
     assert r.status_code==422,r.text
@@ -96,7 +97,9 @@ def test_past_report_labels_current_crm_and_personal_data(client):
     book=load_workbook(io.BytesIO(client.get(f'/api/v22/events/{eid}/report?format=xlsx').content))
     assert 'VIP alla generazione' in list(book['Partecipanti'].values)[0]
     text=str([list(s.values) for s in book])
-    assert 'DATI PERSONALI' in text and data['crm_temporal_note'] in text
+    assert 'DATI PERSONALI' in text and 'Il report non ricostruisce lo status VIP' in text
+    temporal=next(row[1].value for row in book['Metodo'] if row[0].value=='Riferimento temporale CRM')
+    assert book['Riepilogo']['B5'].value in temporal
     assert 'p0@example.test' in text and 'RISERVATO NON ESPORTARE' not in text
     # Guard the PDF rendering boundary: its model is detached and PDF renders aggregates only.
     from unittest.mock import patch
@@ -140,3 +143,13 @@ def test_large_report_releases_lock_before_render_and_keeps_snapshot(client,monk
         book=load_workbook(io.BytesIO(response.content),read_only=True)
         assert book['Riepilogo']['B7'].value==10000 and book['Partecipanti'].max_row==10001
     else:assert response.content.startswith(b'%PDF-')
+
+
+def test_reassign_refuses_conflict_resolved_by_later_merge(client):
+    rid=conflicted('note')
+    with module.db(True) as c:c.execute("UPDATE people SET email='same@example.test'")
+    merged=client.post('/api/matches/decision',json={'a':1,'b':2,'action':'merge'})
+    assert merged.status_code==200,merged.text
+    before=state(rid)
+    assert client.post(f'/api/v22/records/{rid}/reassign',json={'person_id':2,'revision':1,'reason':'Scelta da coda obsoleta'}).status_code==409
+    assert state(rid)==before
